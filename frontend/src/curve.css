@@ -1,0 +1,183 @@
+.curve-container {
+  background-color: black;
+  color: white;
+  padding: 2rem;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: row;
+}
+
+.curve-content {
+  max-width: 600px;
+  margin-right: 2rem;
+}
+
+.curve-electric-label {
+  margin-bottom: 0.5rem;
+  color: #888;
+  text-transform: uppercase;
+}
+
+.curve-heading {
+  font-size: 3rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+}
+
+.curve-subheading {
+  font-size: 1.25rem;
+  line-height: 1.6;
+  color: #ccc;
+}
+
+.curve-button {
+  margin-top: 2rem;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  color: #007bff;
+  background-color: transparent;
+  border: 2px solid #007bff;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.curve-image {
+  max-width: 400px;
+  border-radius: 8px;
+}
+
+.curve-specs,
+.harrier-specs,
+.punch-specs,
+.tiago-specs,
+.tigor-specs,
+.nexon-specs {
+  background-color: #111;
+  color: white;
+  padding: 2rem;
+  display: flex;
+  justify-content: space-around;
+  margin-top: 2rem;
+}
+
+.curve-spec-item,
+.harrier-spec-item,
+.punch-spec-item,
+.tiago-spec-item,
+.tigor-spec-item,
+.nexon-spec-item {
+  text-align: center;
+  max-width: 150px;
+}
+
+.curve-spec-heading,
+.harrier-spec-heading,
+.punch-spec-heading,
+.tiago-spec-heading,
+.tigor-spec-heading,
+.nexon-spec-heading {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.curve-spec-value,
+.harrier-spec-value,
+.punch-spec-value,
+.tiago-spec-value,
+.tigor-spec-value,
+.nexon-spec-value {
+  font-size: 1.25rem;
+}
+
+.video-headline {
+  color: white;
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 1.25rem;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.video-section {
+  width: 100%;
+  min-height: 100vh;
+  background-color: black;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  padding: 3rem 0 2rem;
+  gap: 0.5rem;
+}
+
+.video-container {
+  width: 100%;
+  max-width: 1200px;
+  height: min(80vh, 720px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: black;
+  padding: 0 10px;
+  margin: 0;
+}
+
+.curve-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 8px;
+}
+
+.innovative-tech-section {
+  background-color: black;
+  color: white;
+  display: flex;
+  padding: 3rem 2rem;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.innovative-tech-section.reversed {
+  flex-direction: row-reverse;
+}
+
+.innovative-text {
+  max-width: 50%;
+}
+
+.innovative-headline {
+  font-size: 2.5rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.innovative-subheading {
+  font-size: 1.25rem;
+  color: #ccc;
+  margin-bottom: 2rem;
+}
+
+.v2v-headline {
+  font-size: 1.75rem;
+  font-weight: bold;
+  margin-bottom: 0.25rem;
+}
+
+.v2v-subheading {
+  font-size: 1rem;
+  color: #aaa;
+}
+
+.innovative-image-container {
+  max-width: 45%;
+}
+
+.innovative-image {
+  width: 100%;
+  border-radius: 8px;
+}

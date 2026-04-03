@@ -1,0 +1,365 @@
+/* Dealership Locator Container */
+.dealership-locator-container {
+  background: #000;
+  color: #fff;
+  padding: 60px 20px;
+  min-height: 100vh;
+}
+
+/* Header */
+.dealership-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.dealership-header h1 {
+  font-size: 48px;
+  font-weight: 700;
+  color: #ffd700;
+  margin-bottom: 16px;
+  letter-spacing: 1px;
+}
+
+.dealership-header p {
+  font-size: 18px;
+  color: #ccc;
+  margin-bottom: 20px;
+}
+
+.error-message {
+  background: rgba(255, 215, 0, 0.1);
+  border: 1px solid #ffd700;
+  padding: 12px 20px;
+  border-radius: 8px;
+  color: #ffd700;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* Loading State */
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 20px;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(255, 215, 0, 0.1);
+  border-top-color: #ffd700;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Content Layout */
+.dealership-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+/* Map Section */
+.map-section {
+  position: relative;
+  height: 700px;
+  background: #111;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(255, 215, 0, 0.1);
+}
+
+.map {
+  width: 100%;
+  height: 100%;
+}
+
+.map-legend {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(10px);
+  padding: 16px 20px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 215, 0, 0.2);
+  display: flex;
+  gap: 20px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #fff;
+}
+
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+}
+
+.legend-dot.dealership {
+  background: #ffd700;
+}
+
+.legend-dot.user {
+  background: #ffd700;
+}
+
+/* Dealerships List */
+.dealerships-list {
+  height: 700px;
+  overflow-y: auto;
+  padding-right: 10px;
+}
+
+.dealerships-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.dealerships-list::-webkit-scrollbar-track {
+  background: #111;
+  border-radius: 10px;
+}
+
+.dealerships-list::-webkit-scrollbar-thumb {
+  background: #ffd700;
+  border-radius: 10px;
+}
+
+.dealerships-list::-webkit-scrollbar-thumb:hover {
+  background: #ffa500;
+}
+
+.dealerships-list h2 {
+  font-size: 28px;
+  font-weight: 600;
+  color: #ffd700;
+  margin-bottom: 24px;
+  position: sticky;
+  top: 0;
+  background: #000;
+  padding: 10px 0;
+  z-index: 10;
+}
+
+/* Dealership Card */
+.dealership-card {
+  background: #111;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.dealership-card:hover {
+  border-color: #ffd700;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(255, 215, 0, 0.2);
+}
+
+.dealership-card.selected {
+  border-color: #ffd700;
+  background: rgba(255, 215, 0, 0.05);
+  box-shadow: 0 8px 24px rgba(255, 215, 0, 0.3);
+}
+
+.dealership-header-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+  gap: 12px;
+}
+
+.dealership-header-card h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #fff;
+  margin: 0;
+  flex: 1;
+}
+
+.distance-badge {
+  background: linear-gradient(135deg, #ffd700, #ffa500);
+  color: #000;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.dealership-address {
+  font-size: 15px;
+  color: #aaa;
+  margin: 12px 0;
+  line-height: 1.6;
+}
+
+/* Dealership Details */
+.dealership-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 16px 0;
+  padding: 16px;
+  background: rgba(255, 215, 0, 0.03);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 215, 0, 0.1);
+}
+
+.detail-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.detail-label {
+  color: #ffd700;
+  font-weight: 600;
+  min-width: 100px;
+}
+
+.detail-value {
+  color: #ddd;
+}
+
+.services-item {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.services-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.service-tag {
+  background: rgba(255, 215, 0, 0.1);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  color: #ffd700;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Directions Button */
+.directions-btn {
+  width: 100%;
+  background: linear-gradient(135deg, #ffd700, #ffa500);
+  color: #000;
+  border: none;
+  padding: 14px 24px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 12px;
+}
+
+.directions-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(255, 215, 0, 0.4);
+  background: linear-gradient(135deg, #ffa500, #ffd700);
+}
+
+.directions-btn:active {
+  transform: translateY(0);
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .dealership-content {
+    grid-template-columns: 1fr;
+  }
+
+  .map-section {
+    height: 500px;
+  }
+
+  .dealerships-list {
+    height: auto;
+    max-height: 600px;
+  }
+}
+
+@media (max-width: 768px) {
+  .dealership-header h1 {
+    font-size: 36px;
+  }
+
+  .dealership-header p {
+    font-size: 16px;
+  }
+
+  .map-section {
+    height: 400px;
+  }
+
+  .dealership-header-card {
+    flex-direction: column;
+  }
+
+  .distance-badge {
+    align-self: flex-start;
+  }
+
+  .map-legend {
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    bottom: 10px;
+    left: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .dealership-locator-container {
+    padding: 40px 15px;
+  }
+
+  .dealership-header h1 {
+    font-size: 28px;
+  }
+
+  .dealership-card {
+    padding: 18px;
+  }
+
+  .dealership-header-card h3 {
+    font-size: 18px;
+  }
+
+  .detail-label {
+    min-width: 80px;
+    font-size: 13px;
+  }
+
+  .detail-value {
+    font-size: 13px;
+  }
+}
