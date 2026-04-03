@@ -29,6 +29,9 @@ const {
   getOrders,
   getOrderById,
 } = require("./controllers/cartController");
+const {
+  getNearbyDealerships,
+} = require("./controllers/dealershipController");
 
 const app = express();
 
@@ -51,6 +54,8 @@ app.post("/api/carcircle", auth, uploadCarCircleImages, validateCarBrand, create
 app.get("/api/carcircle", auth, getCarCircleListings);
 app.put("/api/carcircle/:id", auth, uploadCarCircleImages, validateCarBrand, updateCarCircleListing);
 app.delete("/api/carcircle/:id", auth, deleteCarCircleListing);
+
+app.get("/api/dealerships/nearby", getNearbyDealerships);
 
 // Cart routes
 app.post("/api/cart/items", auth, addCartItem);

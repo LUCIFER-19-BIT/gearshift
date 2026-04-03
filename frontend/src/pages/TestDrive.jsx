@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import useAuthStore from "../utils/authStore";
+import { fetchNearbyTataDealerships, groupDealershipsByCity } from "../utils/dealershipApi";
 import testdriveImg from "../assets/testdrive.jpg";
 import DealershipLocator from "../components/DealershipLocator";
 // Car model images
@@ -12,21 +13,6 @@ import altrozImg2 from "../assets/altrozenew.png";
 import tiagoImg2 from "../assets/tiagonew.png";
 import punchImg from "../assets/punch.png";
 import tigorImg from "../assets/TIGOR/opal-white-right-39-Picsart-BackgroundRemover.png";
-const RADIUS_KM = 30;
-
-// Haversine formula to calculate distance between two coordinates
-const calculateDistance = (lat1, lon1, lat2, lon2) => {
-    const R = 6371; // Earth's radius in kilometers
-    const dLat = (lat2 - lat1) * (Math.PI / 180);
-    const dLon = (lon2 - lon1) * (Math.PI / 180);
-    const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
-        Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const distance = R * c;
-    return distance;
-};
 const carImages = {
     harrier: harrierImg,
     nexon: nexonImg2,
@@ -60,39 +46,6 @@ const variantOptions = {
     tigor: ["XE", "XM", "XT", "XZ", "XZ+"],
 };
 
-const tataDealerships = [
-    { id: 1, name: "Puneet Automobiles - Malad West", city: "Mumbai", address: "Shop No 4, Accord Nidhi Building, Link Road, Malad West, Mumbai 400064", lat: 19.1756, lng: 72.8367 },
-    { id: 2, name: "Wasan Motors - Borivali East", city: "Mumbai", address: "Unit 3 & 4, Blue Rose Industrial Estate, Western Express Highway, Borivali East, Mumbai 400066", lat: 19.2183, lng: 72.8517 },
-    { id: 3, name: "Wasan Motors - Chembur", city: "Mumbai", address: "Wasan House, 4, Swastik Park, Sion Trombay Road, Chembur, Mumbai 400071", lat: 19.0330, lng: 72.8850 },
-    { id: 4, name: "Inderjit Cars - Mira Bhayandar", city: "Mumbai", address: "Platinum Building, Ground Floor, Opp. Pleasant Park, Next To Brand Factory, Mira Bhayandar, Mumbai 401107", lat: 19.2936, lng: 72.7933 },
-    { id: 5, name: "Keshva Motors - Mulund", city: "Mumbai", address: "Shop No 10, Marathon Max, Mulund Goregaon Link Road, Mulund, Mumbai 400080", lat: 19.1436, lng: 72.9483 },
-    { id: 6, name: "Inderjit Cars - Andheri West", city: "Mumbai", address: "1059/1060, Adarsh Nagar, Near Infinity Mall, Off New Link Road, Andheri West, Mumbai 400102", lat: 19.1136, lng: 72.8267 },
-    { id: 7, name: "Puneet Automobiles - Prabhadevi", city: "Mumbai", address: "Lloyds Centre Point, Appasaheb Marathe Marg, Prabhadevi, Mumbai 400025", lat: 18.9820, lng: 72.8250 },
-    { id: 8, name: "Trident Tata - Andheri West", city: "Mumbai", address: "No. 195, PT, Nasar Residency, Showroom 5 & 6, Juhu Lane, Andheri West, Mumbai 400058", lat: 19.1089, lng: 72.8181 },
-    { id: 9, name: "Wasan Motors - Marine Lines", city: "Mumbai", address: "3 & 4, Pearl Mansion, 91 Maharshri Karve Marg, Near Kala Niketan, Marine Lines, Mumbai 400002", lat: 18.9697, lng: 72.8269 },
-    { id: 10, name: "Wasan Motors - Bandra West", city: "Mumbai", address: "Kailash Enclave, Plot No. 565, 32nd National College Road, Bandra West, Mumbai 400050", lat: 19.0596, lng: 72.8286 },
-    { id: 11, name: "Trident Tata - Vikhroli West", city: "Mumbai", address: "96, LBS Marg, Opp. HP Petrol Pump, Vikhroli West, Mumbai 400083", lat: 19.0939, lng: 72.9267 },
-    { id: 12, name: "DPS Cars - Mayapuri", city: "Delhi", address: "A1/1, Phase 1, Mayapuri Industrial Area, New Delhi 110064", lat: 28.5355, lng: 77.0521 },
-    { id: 13, name: "Malwa Automobiles - Prashant Vihar", city: "Delhi", address: "A-1/16 Prashant Vihar, Outer Ring Road, Near Rohini Court, Delhi 110085", lat: 28.7041, lng: 77.0571 },
-    { id: 14, name: "Autovikas Tata - Shivaji Marg", city: "Delhi", address: "26/3-4, Najafgarh Road Industrial Area, Shivaji Marg, Delhi 110015", lat: 28.6139, lng: 77.0842 },
-    { id: 15, name: "Concorde Motors - Patparganj", city: "Delhi", address: "Plot No. 88, Patparganj Industrial Area, Delhi 110092", lat: 28.5933, lng: 77.2699 },
-    { id: 16, name: "SAB Motors - Lajpat Nagar", city: "Delhi", address: "Plot No 56, Ground Floor, Main Ring Road, Lajpat Nagar III, Delhi 110024", lat: 28.5638, lng: 77.2271 },
-    { id: 17, name: "Tata Motors - MG Road", city: "Bangalore", address: "MG Road, Bangalore, Karnataka 560001", lat: 12.9352, lng: 77.6245 },
-    { id: 18, name: "Tata Motors - Whitefield", city: "Bangalore", address: "Whitefield Main Road, Bangalore, Karnataka 560066", lat: 13.0352, lng: 77.7245 },
-    { id: 19, name: "Tata Motors - Electronic City", city: "Bangalore", address: "Electronic City Phase 1, Bangalore, Karnataka 560100", lat: 12.8456, lng: 77.6789 },
-    { id: 20, name: "Tata Motors - Indiranagar", city: "Bangalore", address: "Indiranagar 100 Feet Road, Bangalore, Karnataka 560038", lat: 13.0034, lng: 77.6427 },
-    { id: 21, name: "Tata Motors - Koregaon Park", city: "Pune", address: "Koregaon Park, Pune, Maharashtra 411001", lat: 18.5335, lng: 73.8488 },
-    { id: 22, name: "Tata Motors - Hinjewadi", city: "Pune", address: "Hinjewadi Phase 1, Pune, Maharashtra 411057", lat: 18.5912, lng: 73.7421 },
-    { id: 23, name: "Tata Motors - Viman Nagar", city: "Pune", address: "Viman Nagar, Pune, Maharashtra 411014", lat: 18.5667, lng: 73.9167 },
-    { id: 24, name: "Tata Motors - HITEC City", city: "Hyderabad", address: "HITEC City, Hyderabad, Telangana 500081", lat: 17.3850, lng: 78.4867 },
-    { id: 25, name: "Tata Motors - Gachibowli", city: "Hyderabad", address: "Gachibowli, Hyderabad, Telangana 500032", lat: 17.4432, lng: 78.3496 },
-    { id: 26, name: "Tata Motors - Banjara Hills", city: "Hyderabad", address: "Road No 12, Banjara Hills, Hyderabad, Telangana 500034", lat: 17.3972, lng: 78.3854 },
-    { id: 27, name: "Gurudev Motors - Royapettah", city: "Chennai", address: "No. 69, Sri Krishnapuram Street, Jagadambal Colony, Royapettah, Chennai 600014", lat: 13.0067, lng: 80.2585 },
-    { id: 28, name: "Gurudev Motors - Arumbakkam", city: "Chennai", address: "Old No 90, New No 1090, E.V.R. Periyar High Road, Arumbakkam, Chennai 600106", lat: 13.0650, lng: 80.1842 },
-    { id: 29, name: "FPL Tata - Korattur", city: "Chennai", address: "100 Feet Road, 200 Ft Ring Road, Before DRJ Hospital, Korattur, Chennai 600077", lat: 13.1048, lng: 80.2271 },
-    { id: 30, name: "FPL Tata - Kottivakkam", city: "Chennai", address: "No.238/7/8/10, East Coast Road, Kottivakkam, Chennai 600041", lat: 12.8833, lng: 80.2667 }
-];
-
 const TestDrive = () => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -110,6 +63,9 @@ const TestDrive = () => {
     const [selectedDealership, setSelectedDealership] = useState("");
     const [selectedCity, setSelectedCity] = useState("");
     const [dealershipSearch, setDealershipSearch] = useState("");
+    const [dealerships, setDealerships] = useState([]);
+    const [dealershipLoading, setDealershipLoading] = useState(true);
+    const [dealershipError, setDealershipError] = useState("");
     const [userLocation, setUserLocation] = useState(null);
     const [locationError, setLocationError] = useState("");
 
@@ -121,22 +77,70 @@ const TestDrive = () => {
     }, [user]);
 
     useEffect(() => {
-        // Get user's current location
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    setUserLocation({
-                        lat: position.coords.latitude,
-                        lng: position.coords.longitude,
-                    });
-                    setLocationError("");
-                },
-                (error) => {
-                    setLocationError("Unable to get your location. Showing all dealerships.");
-                    console.log("Geolocation error:", error);
-                }
-            );
+        let active = true;
+
+        if (!navigator.geolocation) {
+            setLocationError("Enable location to load nearby Tata dealerships.");
+            setDealershipLoading(false);
+            return () => {
+                active = false;
+            };
         }
+
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                if (!active) {
+                    return;
+                }
+
+                const liveLocation = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude,
+                };
+
+                setUserLocation(liveLocation);
+                setLocationError("");
+
+                try {
+                    const liveDealerships = await fetchNearbyTataDealerships(liveLocation);
+                    if (!active) {
+                        return;
+                    }
+                    setDealerships(liveDealerships);
+                    setDealershipError("");
+                } catch (error) {
+                    if (!active) {
+                        return;
+                    }
+                    console.error("Error fetching live Tata dealerships:", error);
+                    setDealerships([]);
+                    setDealershipError("Unable to load live Tata dealerships right now.");
+                } finally {
+                    if (active) {
+                        setDealershipLoading(false);
+                    }
+                }
+            },
+            (error) => {
+                if (!active) {
+                    return;
+                }
+                console.error("Geolocation error:", error);
+                setLocationError("Location access was denied. Enable location to load nearby Tata dealerships.");
+                setDealershipError("No live Tata dealerships available without location access.");
+                setDealershipLoading(false);
+                setDealerships([]);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 60000,
+            }
+        );
+
+        return () => {
+            active = false;
+        };
     }, []);
 
     useEffect(() => {
@@ -146,26 +150,8 @@ const TestDrive = () => {
     }, [selectedModel]);
 
     const dealershipsByCity = React.useMemo(() => {
-        const grouped = {};
-        // Always show all dealerships - filter by proximity only if location is available
-        const dealershipsToShow = userLocation
-            ? tataDealerships.filter((dealer) => {
-                const distance = calculateDistance(userLocation.lat, userLocation.lng, dealer.lat, dealer.lng);
-                return distance <= RADIUS_KM;
-              })
-            : tataDealerships; // Show all dealerships if location not available
-        
-        dealershipsToShow.forEach((dealer) => {
-            if (!grouped[dealer.city]) {
-                grouped[dealer.city] = [];
-            }
-            if (userLocation) {
-                dealer.distance = calculateDistance(userLocation.lat, userLocation.lng, dealer.lat, dealer.lng);
-            }
-            grouped[dealer.city].push(dealer);
-        });
-        return grouped;
-    }, [userLocation]);
+        return groupDealershipsByCity(dealerships);
+    }, [dealerships]);
 
     const filteredDealershipsByCity = React.useMemo(() => {
         const search = dealershipSearch.trim().toLowerCase();
@@ -411,15 +397,26 @@ const TestDrive = () => {
 
                         <div className="form-group">
                             <label>Select Dealership</label>
-                            {userLocation && (
+                            {dealershipLoading && (
                                 <p style={{ fontSize: "12px", color: "#666", marginBottom: "8px" }}>
-                                    Showing dealerships within {RADIUS_KM}km of your location
+                                    Loading live Tata dealerships...
+                                </p>
+                            )}
+                            {locationError && (
+                                <p style={{ fontSize: "12px", color: "#ff6b6b", marginBottom: "8px" }}>
+                                    {locationError}
+                                </p>
+                            )}
+                            {dealershipError && (
+                                <p style={{ fontSize: "12px", color: "#ff6b6b", marginBottom: "8px" }}>
+                                    {dealershipError}
                                 </p>
                             )}
                             <select
                                 value={selectedDealership}
                                 onChange={(e) => setSelectedDealership(e.target.value)}
                                 required
+                                disabled={dealershipLoading || dealerships.length === 0}
                             >
                                 <option value="">Select Preferred Dealership</option>
                                 {Object.keys(filteredDealershipsByCity).length > 0 ? (
@@ -429,20 +426,19 @@ const TestDrive = () => {
                                                 .sort((a, b) => (a.distance || 999) - (b.distance || 999))
                                                 .map((dealer) => (
                                                     <option key={dealer.id} value={JSON.stringify(dealer)}>
-                                                        {dealer.name} {dealer.distance ? `(${dealer.distance.toFixed(1)}km)` : ""}
+                                                        {dealer.name} {dealer.distance ? `(${dealer.distance}km)` : ""}
                                                     </option>
                                                 ))}
                                         </optgroup>
                                     ))
                                 ) : (
-                                    // Fallback: Show all dealerships if filter returns empty
                                     Object.keys(dealershipsByCity).map((city) => (
                                         <optgroup key={city} label={city}>
                                             {dealershipsByCity[city]
                                                 .sort((a, b) => (a.distance || 999) - (b.distance || 999))
                                                 .map((dealer) => (
                                                     <option key={dealer.id} value={JSON.stringify(dealer)}>
-                                                        {dealer.name} {dealer.distance ? `(${dealer.distance.toFixed(1)}km)` : ""}
+                                                        {dealer.name} {dealer.distance ? `(${dealer.distance}km)` : ""}
                                                     </option>
                                                 ))}
                                         </optgroup>

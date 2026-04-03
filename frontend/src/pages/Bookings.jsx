@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useLocation, useSearchParams, useNavigate } from "react-router-dom";
 import useAuthStore from "../utils/authStore";
+import { fetchNearbyTataDealerships, groupDealershipsByCity } from "../utils/dealershipApi";
 // Harrier colors
 import ashGrey from "../assets/harrier/ash-grey-left-8.png";
 import coralRed from "../assets/harrier/coral-red-left-11.png";
@@ -281,52 +282,78 @@ const Bookings = () => {
     const [selectedDealership, setSelectedDealership] = useState("");
     const [selectedCity, setSelectedCity] = useState("");
     const [dealershipSearch, setDealershipSearch] = useState("");
+    const [dealerships, setDealerships] = useState([]);
+    const [dealershipLoading, setDealershipLoading] = useState(true);
+    const [dealershipError, setDealershipError] = useState("");
     const [loading, setLoading] = useState(false);
     const [feedback, setFeedback] = useState({ type: "", message: "" });
 
-    const tataDealerships = useMemo(() => [
-        { id: 1, name: "Puneet Automobiles - Malad West", city: "Mumbai", address: "Shop No 4, Accord Nidhi Building, Link Road, Malad West, Mumbai 400064" },
-        { id: 2, name: "Wasan Motors - Borivali East", city: "Mumbai", address: "Unit 3 & 4, Blue Rose Industrial Estate, Western Express Highway, Borivali East, Mumbai 400066" },
-        { id: 3, name: "Wasan Motors - Chembur", city: "Mumbai", address: "Wasan House, 4, Swastik Park, Sion Trombay Road, Chembur, Mumbai 400071" },
-        { id: 4, name: "Inderjit Cars - Mira Bhayandar", city: "Mumbai", address: "Platinum Building, Ground Floor, Opp. Pleasant Park, Next To Brand Factory, Mira Bhayandar, Mumbai 401107" },
-        { id: 5, name: "Keshva Motors - Mulund", city: "Mumbai", address: "Shop No 10, Marathon Max, Mulund Goregaon Link Road, Mulund, Mumbai 400080" },
-        { id: 6, name: "Inderjit Cars - Andheri West", city: "Mumbai", address: "1059/1060, Adarsh Nagar, Near Infinity Mall, Off New Link Road, Andheri West, Mumbai 400102" },
-        { id: 7, name: "Puneet Automobiles - Prabhadevi", city: "Mumbai", address: "Lloyds Centre Point, Appasaheb Marathe Marg, Prabhadevi, Mumbai 400025" },
-        { id: 8, name: "Trident Tata - Andheri West", city: "Mumbai", address: "No. 195, PT, Nasar Residency, Showroom 5 & 6, Juhu Lane, Andheri West, Mumbai 400058" },
-        { id: 9, name: "Wasan Motors - Marine Lines", city: "Mumbai", address: "3 & 4, Pearl Mansion, 91 Maharshri Karve Marg, Near Kala Niketan, Marine Lines, Mumbai 400002" },
-        { id: 10, name: "Wasan Motors - Bandra West", city: "Mumbai", address: "Kailash Enclave, Plot No. 565, 32nd National College Road, Bandra West, Mumbai 400050" },
-        { id: 11, name: "Trident Tata - Vikhroli West", city: "Mumbai", address: "96, LBS Marg, Opp. HP Petrol Pump, Vikhroli West, Mumbai 400083" },
-        { id: 12, name: "DPS Cars - Mayapuri", city: "Delhi", address: "A1/1, Phase 1, Mayapuri Industrial Area, New Delhi 110064" },
-        { id: 13, name: "Malwa Automobiles - Prashant Vihar", city: "Delhi", address: "A-1/16 Prashant Vihar, Outer Ring Road, Near Rohini Court, Delhi 110085" },
-        { id: 14, name: "Autovikas Tata - Shivaji Marg", city: "Delhi", address: "26/3-4, Najafgarh Road Industrial Area, Shivaji Marg, Delhi 110015" },
-        { id: 15, name: "Concorde Motors - Patparganj", city: "Delhi", address: "Plot No. 88, Patparganj Industrial Area, Delhi 110092" },
-        { id: 16, name: "SAB Motors - Lajpat Nagar", city: "Delhi", address: "Plot No 56, Ground Floor, Main Ring Road, Lajpat Nagar III, Delhi 110024" },
-        { id: 17, name: "Tata Motors - MG Road", city: "Bangalore", address: "MG Road, Bangalore, Karnataka 560001" },
-        { id: 18, name: "Tata Motors - Whitefield", city: "Bangalore", address: "Whitefield Main Road, Bangalore, Karnataka 560066" },
-        { id: 19, name: "Tata Motors - Electronic City", city: "Bangalore", address: "Electronic City Phase 1, Bangalore, Karnataka 560100" },
-        { id: 20, name: "Tata Motors - Indiranagar", city: "Bangalore", address: "Indiranagar 100 Feet Road, Bangalore, Karnataka 560038" },
-        { id: 21, name: "Tata Motors - Koregaon Park", city: "Pune", address: "Koregaon Park, Pune, Maharashtra 411001" },
-        { id: 22, name: "Tata Motors - Hinjewadi", city: "Pune", address: "Hinjewadi Phase 1, Pune, Maharashtra 411057" },
-        { id: 23, name: "Tata Motors - Viman Nagar", city: "Pune", address: "Viman Nagar, Pune, Maharashtra 411014" },
-        { id: 24, name: "Tata Motors - HITEC City", city: "Hyderabad", address: "HITEC City, Hyderabad, Telangana 500081" },
-        { id: 25, name: "Tata Motors - Gachibowli", city: "Hyderabad", address: "Gachibowli, Hyderabad, Telangana 500032" },
-        { id: 26, name: "Tata Motors - Banjara Hills", city: "Hyderabad", address: "Road No 12, Banjara Hills, Hyderabad, Telangana 500034" },
-        { id: 27, name: "Gurudev Motors - Royapettah", city: "Chennai", address: "No. 69, Sri Krishnapuram Street, Jagadambal Colony, Royapettah, Chennai 600014" },
-        { id: 28, name: "Gurudev Motors - Arumbakkam", city: "Chennai", address: "Old No 90, New No 1090, E.V.R. Periyar High Road, Arumbakkam, Chennai 600106" },
-        { id: 29, name: "FPL Tata - Korattur", city: "Chennai", address: "100 Feet Road, 200 Ft Ring Road, Before DRJ Hospital, Korattur, Chennai 600077" },
-        { id: 30, name: "FPL Tata - Kottivakkam", city: "Chennai", address: "No.238/7/8/10, East Coast Road, Kottivakkam, Chennai 600041" }
-    ], []);
+    useEffect(() => {
+        let active = true;
+
+        if (!navigator.geolocation) {
+            setDealershipError("Enable location to load nearby Tata dealerships.");
+            setDealershipLoading(false);
+            return () => {
+                active = false;
+            };
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                if (!active) {
+                    return;
+                }
+
+                const liveLocation = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude,
+                };
+
+                try {
+                    const liveDealerships = await fetchNearbyTataDealerships(liveLocation);
+                    if (!active) {
+                        return;
+                    }
+                    setDealerships(liveDealerships);
+                    setDealershipError("");
+                } catch (error) {
+                    if (!active) {
+                        return;
+                    }
+                    console.error("Error fetching live Tata dealerships:", error);
+                    setDealerships([]);
+                    setDealershipError("Unable to load live Tata dealerships right now.");
+                } finally {
+                    if (active) {
+                        setDealershipLoading(false);
+                    }
+                }
+            },
+            (error) => {
+                if (!active) {
+                    return;
+                }
+                console.error("Geolocation error:", error);
+                setDealershipError("Location access was denied. Enable location to load nearby Tata dealerships.");
+                setDealershipLoading(false);
+                setDealerships([]);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 60000,
+            }
+        );
+
+        return () => {
+            active = false;
+        };
+    }, []);
 
     const dealershipsByCity = useMemo(() => {
-        const grouped = {};
-        tataDealerships.forEach((dealer) => {
-            if (!grouped[dealer.city]) {
-                grouped[dealer.city] = [];
-            }
-            grouped[dealer.city].push(dealer);
-        });
-        return grouped;
-    }, [tataDealerships]);
+        return groupDealershipsByCity(dealerships);
+    }, [dealerships]);
 
     const filteredDealershipsByCity = useMemo(() => {
         const search = dealershipSearch.trim().toLowerCase();
@@ -629,10 +656,13 @@ const Bookings = () => {
 
                     <div className="form-group">
                         <label>Select Dealership</label>
+                        {dealershipLoading && <p style={{ fontSize: "12px", color: "#666", marginBottom: "8px" }}>Loading live Tata dealerships...</p>}
+                        {dealershipError && <p style={{ fontSize: "12px", color: "#ff6b6b", marginBottom: "8px" }}>{dealershipError}</p>}
                         <select
                             value={selectedDealership}
                             onChange={(e) => setSelectedDealership(e.target.value)}
                             required
+                            disabled={dealershipLoading || dealerships.length === 0}
                         >
                             <option value="">Select Preferred Dealership</option>
                             {Object.keys(filteredDealershipsByCity).length > 0 ? (
@@ -646,7 +676,6 @@ const Bookings = () => {
                                     </optgroup>
                                 ))
                             ) : (
-                                // Fallback: Show all dealerships if filter returns empty
                                 Object.keys(dealershipsByCity).map((city) => (
                                     <optgroup key={city} label={city}>
                                         {dealershipsByCity[city].map((dealer) => (

@@ -1,551 +1,284 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import '../ChargingStations.css';
 
+const DEFAULT_MAP_CENTER = { lat: 20.5937, lng: 78.9629 };
+const SEARCH_RADIUS_METERS = 25000;
+const OVERPASS_ENDPOINTS = [
+    'https://overpass-api.de/api/interpreter',
+    'https://overpass.kumi.systems/api/interpreter'
+];
+const TILE_LAYER_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
+const TILE_LAYER_URL = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+
+const buildStationIcon = (isPublic) => L.divIcon({
+    className: 'charging-marker',
+    html: `<span class="charging-marker__pin ${isPublic ? 'charging-marker__pin--public' : 'charging-marker__pin--restricted'}"></span>`,
+    iconSize: [30, 30],
+    iconAnchor: [15, 30],
+    popupAnchor: [0, -26]
+});
+
+const userLocationIcon = L.divIcon({
+    className: 'charging-marker charging-marker--user',
+    html: '<span class="charging-marker__user-dot"></span>',
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+    popupAnchor: [0, -10]
+});
+
+const deg2rad = (deg) => deg * (Math.PI / 180);
+
+const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    const earthRadius = 6371;
+    const dLat = deg2rad(lat2 - lat1);
+    const dLon = deg2rad(lon2 - lon1);
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    return (earthRadius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))).toFixed(1);
+};
+
+const buildAddress = (tags = {}) => {
+    const addressParts = [
+        tags['addr:housenumber'],
+        tags['addr:street'],
+        tags['addr:suburb'],
+        tags['addr:city'],
+        tags['addr:state']
+    ].filter(Boolean);
+
+    if (addressParts.length > 0) {
+        return addressParts.join(', ');
+    }
+
+    return tags['addr:full'] || tags.operator || 'Address not listed';
+};
+
+const buildPowerLabel = (tags = {}) => tags.maxpower || tags.capacity || 'Power info not listed';
+
+const buildConnectorLabel = (tags = {}) => {
+    const connectorFields = [
+        'socket:type2',
+        'socket:ccs1',
+        'socket:ccs2',
+        'socket:chademo',
+        'socket:type1',
+        'socket:tesla_supercharger',
+        'socket:gbt_dc'
+    ];
+
+    const connectors = connectorFields
+        .filter((field) => tags[field])
+        .map((field) => field.replace('socket:', '').toUpperCase());
+
+    return connectors.length > 0 ? connectors.join(', ') : 'Connector not listed';
+};
+
+const isPublicAccess = (tags = {}) => {
+    const access = String(tags.access || 'public').toLowerCase();
+    return access === 'public' || access === 'permissive' || access === 'yes';
+};
+
+const buildDirectionsUrl = (from, to) => {
+    if (!from || !to) {
+        return 'https://www.openstreetmap.org';
+    }
+
+    return `https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=${from.lat}%2C${from.lng}%3B${to.lat}%2C${to.lng}`;
+};
+
+const MapViewController = ({ center, zoom }) => {
+    const map = useMap();
+
+    useEffect(() => {
+        if (center) {
+            map.setView(center, zoom, { animate: true });
+        }
+    }, [center, zoom, map]);
+
+    return null;
+};
+
+const normalizeStation = (element, location, originLocation, index) => {
+    const tags = element.tags || {};
+
+    return {
+        id: `${element.type}-${element.id || index}`,
+        name: tags.name || tags.operator || tags.network || 'EV Charging Station',
+        address: buildAddress(tags),
+        lat: location.lat,
+        lng: location.lng,
+        operator: tags.operator || tags.network || 'OpenStreetMap',
+        connector: buildConnectorLabel(tags),
+        power: buildPowerLabel(tags),
+        access: tags.access || 'public',
+        isPublic: isPublicAccess(tags),
+        distance: calculateDistance(originLocation.lat, originLocation.lng, location.lat, location.lng),
+        website: tags.website || tags['contact:website'] || null,
+        phone: tags.phone || tags['contact:phone'] || null
+    };
+};
+
 const ChargingStations = () => {
-    const [map, setMap] = useState(null);
     const [userLocation, setUserLocation] = useState(null);
     const [stations, setStations] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [selectedStation, setSelectedStation] = useState(null);
 
-    // Tata Power EZ Charge stations across major Indian cities
-    // Based on Tata Power's 5,500+ charging network across 620+ cities
-    const tataChargingStations = useMemo(() => [
-        // Delhi NCR Region (92 stations across Delhi)
-        {
-            id: 1,
-            name: "Tata Power EZ Charge - Connaught Place",
-            address: "Connaught Place, New Delhi, Delhi 110001",
-            lat: 28.6315,
-            lng: 77.2167,
-            type: "Fast Charging",
-            power: "60kW DC",
-            available: true,
-            phone: "+91-1800-209-8282"
-        },
-        {
-            id: 2,
-            name: "Tata Power EZ Charge - Cyber City",
-            address: "DLF Cyber City, Gurugram, Haryana 122002",
-            lat: 28.4950,
-            lng: 77.0890,
-            type: "Fast Charging",
-            power: "60kW DC",
-            available: true,
-            phone: "+91-1800-209-8282"
-        },
-        {
-            id: 3,
-            name: "Tata Power EZ Charge - Nehru Place",
-            address: "Nehru Place, New Delhi, Delhi 110019",
-            lat: 28.5494,
-            lng: 77.2501,
-            type: "Rapid Charging",
-            power: "120kW DC",
-            available: false,
-            phone: "+91-1800-209-8282"
-        },
-        {
-            id: 4,
-            name: "Tata Power EZ Charge - Sector 18",
-            address: "Sector 18, Noida, Uttar Pradesh 201301",
-            lat: 28.5677,
-            lng: 77.3240,
-            type: "Fast Charging",
-            power: "60kW DC",
-            available: true,
-            phone: "+91-1800-209-8282"
-        },
-        {
-            id: 5,
-            name: "Tata Power EZ Charge - Aerocity",
-            address: "Aerocity, New Delhi, Delhi 110037",
-            lat: 28.5562,
-            lng: 77.1181,
-            type: "Ultra Fast Charging",
-            power: "240kW DC",
-            available: true,
-            phone: "+91-1800-209-8282"
-        },
-        {
-            id: 6,
-            name: "Tata Power EZ Charge - Saket Mall",
-            address: "Select Citywalk, Saket, New Delhi, Delhi 110017",
-            lat: 28.5244,
-            lng: 77.2066,
-            type: "Fast Charging",
-            power: "60kW DC",
-            available: true,
-            phone: "+91-1800-209-8282"
-        },
-        {
-            id: 7,
-            name: "Tata Power EZ Charge - Vasant Kunj",
-            address: "Vasant Kunj, New Delhi, Delhi 110070",
-            lat: 28.5167,
-            lng: 77.1598,
-            type: "Fast Charging",
-            power: "60kW DC",
-            available: true,
-            phone: "+91-1800-209-8282"
-        },
-        {
-            id: 8,
-            name: "Tata Power EZ Charge - Dwarka",
-            address: "Sector 21, Dwarka, New Delhi, Delhi 110075",
-            lat: 28.5521,
-            lng: 77.0590,
-            type: "Fast Charging",
-            power: "60kW DC",
-            available: false,
-            phone: "+91-1800-209-8282"
-        },
-        // Mumbai Region
-        {
-            id: 9,
-            name: "Tata Power EZ Charge - BKC",
-            address: "Bandra Kurla Complex, Mumbai, Maharashtra 400051",
-            lat: 19.0596,
-            lng: 72.8656,
-            type: "Fast Charging",
-            power: "60kW DC",
-            available: true,
-            phone: "+91-1800-209-8282"
-        },
-        {
-            id: 10,
-            name: "Tata Power EZ Charge - Powai",
-            address: "Hiranandani, Powai, Mumbai, Maharashtra 400076",
-            lat: 19.1197,
-            lng: 72.9059,
-            type: "Fast Charging",
-            power: "60kW DC",
-            available: true,
-            phone: "+91-1800-209-8282"
-        },
-        {
-            id: 11,
-            name: "Tata Power EZ Charge - Andheri",
-            address: "Andheri East, Mumbai, Maharashtra 400069",
-            lat: 19.1136,
-            lng: 72.8697,
-            type: "Fast Charging",
-            power: "60kW DC",
-            available: true,
-            phone: "+91-1800-209-8282"
-        },
-        {
-            id: 12,
-            name: "Tata Power EZ Charge - Thane",
-            address: "Thane West, Thane, Maharashtra 400601",
-            lat: 19.2183,
-            lng: 72.9781,
-            type: "Fast Charging",
-            power: "60kW DC",
-            available: false,
-            phone: "+91-1800-209-8282"
-        },
-        // Bangalore Region
-        {
-            id: 13,
-            name: "Tata Power EZ Charge - MG Road",
-            address: "MG Road, Bangalore, Karnataka 560001",
-            lat: 12.9759,
-            lng: 77.6069,
-            type: "Fast Charging",
-            power: "60kW DC",
-            available: true,
-            phone: "+91-1800-209-8282"
-        },
-        {
-            id: 14,
-            name: "Tata Power EZ Charge - Whitefield",
-            address: "Whitefield, Bangalore, Karnataka 560066",
-            lat: 12.9698,
-            lng: 77.7499,
-            type: "Fast Charging",
-            power: "60kW DC",
-            available: true,
-            phone: "+91-1800-209-8282"
-        },
-        {
-            id: 15,
-            name: "Tata Power EZ Charge - Electronic City",
-            address: "Electronic City Phase 1, Bangalore, Karnataka 560100",
-            lat: 12.8458,
-            lng: 77.6603,
-            type: "Ultra Fast Charging",
-            power: "240kW DC",
-            available: true,
-            phone: "+91-1800-209-8282"
-        },
-        {
-            id: 16,
-            name: "Tata Power EZ Charge - Indiranagar",
-            address: "Indiranagar, Bangalore, Karnataka 560038",
-            lat: 12.9719,
-            lng: 77.6412,
-            type: "Fast Charging",
-            power: "60kW DC",
-            available: true,
-            phone: "+91-1800-209-8282"
-        },
-        // Pune Region
-        {
-            id: 17,
-            name: "Tata Power EZ Charge - Koregaon Park",
-            address: "Koregaon Park, Pune, Maharashtra 411001",
-            lat: 18.5362,
-            lng: 73.8958,
-            type: "Fast Charging",
-            power: "60kW DC",
-            available: true,
-            phone: "+91-1800-209-8282"
-        },
-        {
-            id: 18,
-            name: "Tata Power EZ Charge - Hinjewadi",
-            address: "Hinjewadi Phase 1, Pune, Maharashtra 411057",
-            lat: 18.5912,
-            lng: 73.7389,
-            type: "Fast Charging",
-            power: "60kW DC",
-            available: true,
-            phone: "+91-1800-209-8282"
-        },
-        {
-            id: 19,
-            name: "Tata Power EZ Charge - Viman Nagar",
-            address: "Viman Nagar, Pune, Maharashtra 411014",
-            lat: 18.5679,
-            lng: 73.9143,
-            type: "Fast Charging",
-            power: "60kW DC",
-            available: false,
-            phone: "+91-1800-209-8282"
-        },
-        // Hyderabad Region
-        {
-            id: 20,
-            name: "Tata Power EZ Charge - HITEC City",
-            address: "HITEC City, Hyderabad, Telangana 500081",
-            lat: 17.4435,
-            lng: 78.3772,
-            type: "Fast Charging",
-            power: "60kW DC",
-            available: true,
-            phone: "+91-1800-209-8282"
-        },
-        {
-            id: 21,
-            name: "Tata Power EZ Charge - Gachibowli",
-            address: "Gachibowli, Hyderabad, Telangana 500032",
-            lat: 17.4401,
-            lng: 78.3489,
-            type: "Fast Charging",
-            power: "60kW DC",
-            available: true,
-            phone: "+91-1800-209-8282"
-        },
-        {
-            id: 22,
-            name: "Tata Power EZ Charge - Banjara Hills",
-            address: "Banjara Hills, Hyderabad, Telangana 500034",
-            lat: 17.4239,
-            lng: 78.4738,
-            type: "Fast Charging",
-            power: "60kW DC",
-            available: true,
-            phone: "+91-1800-209-8282"
-        },
-        // Chennai Region
-        {
-            id: 23,
-            name: "Tata Power EZ Charge - OMR",
-            address: "Old Mahabalipuram Road, Chennai, Tamil Nadu 600096",
-            lat: 12.9121,
-            lng: 80.2273,
-            type: "Fast Charging",
-            power: "60kW DC",
-            available: true,
-            phone: "+91-1800-209-8282"
-        },
-        {
-            id: 24,
-            name: "Tata Power EZ Charge - Anna Nagar",
-            address: "Anna Nagar, Chennai, Tamil Nadu 600040",
-            lat: 13.0878,
-            lng: 80.2086,
-            type: "Fast Charging",
-            power: "60kW DC",
-            available: true,
-            phone: "+91-1800-209-8282"
-        },
-        {
-            id: 25,
-            name: "Tata Power EZ Charge - Velachery",
-            address: "Velachery, Chennai, Tamil Nadu 600042",
-            lat: 12.9750,
-            lng: 80.2200,
-            type: "Fast Charging",
-            power: "60kW DC",
-            available: false,
-            phone: "+91-1800-209-8282"
-        },
-        // Kolkata Region
-        {
-            id: 26,
-            name: "Tata Power EZ Charge - Salt Lake",
-            address: "Salt Lake City, Kolkata, West Bengal 700091",
-            lat: 22.5726,
-            lng: 88.4194,
-            type: "Fast Charging",
-            power: "60kW DC",
-            available: true,
-            phone: "+91-1800-209-8282"
-        },
-        {
-            id: 27,
-            name: "Tata Power EZ Charge - New Town",
-            address: "New Town, Rajarhat, Kolkata, West Bengal 700156",
-            lat: 22.5875,
-            lng: 88.4732,
-            type: "Fast Charging",
-            power: "60kW DC",
-            available: true,
-            phone: "+91-1800-209-8282"
-        },
-        // Ahmedabad Region (Gujarat - 95 stations)
-        {
-            id: 28,
-            name: "Tata Power EZ Charge - SG Highway",
-            address: "SG Highway, Ahmedabad, Gujarat 380015",
-            lat: 23.0258,
-            lng: 72.5673,
-            type: "Fast Charging",
-            power: "60kW DC",
-            available: true,
-            phone: "+91-1800-209-8282"
-        },
-        {
-            id: 29,
-            name: "Tata Power EZ Charge - Vastrapur",
-            address: "Vastrapur, Ahmedabad, Gujarat 380015",
-            lat: 23.0395,
-            lng: 72.5245,
-            type: "Fast Charging",
-            power: "60kW DC",
-            available: true,
-            phone: "+91-1800-209-8282"
-        },
-        // Additional Major Cities
-        {
-            id: 30,
-            name: "Tata Power EZ Charge - Jaipur",
-            address: "Malviya Nagar, Jaipur, Rajasthan 302017",
-            lat: 26.8523,
-            lng: 75.8140,
-            type: "Fast Charging",
-            power: "60kW DC",
-            available: true,
-            phone: "+91-1800-209-8282"
-        }
-    ], []);
+    const mapCenter = selectedStation
+        ? [selectedStation.lat, selectedStation.lng]
+        : userLocation
+            ? [userLocation.lat, userLocation.lng]
+            : [DEFAULT_MAP_CENTER.lat, DEFAULT_MAP_CENTER.lng];
 
-    // Calculate distance between two coordinates (in km)
-    const calculateDistance = useCallback((lat1, lon1, lat2, lon2) => {
-        const R = 6371; // Radius of the earth in km
-        const dLat = deg2rad(lat2 - lat1);
-        const dLon = deg2rad(lon2 - lon1);
-        const a =
-            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
-            Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        const d = R * c; // Distance in km
-        return d.toFixed(1);
+    const fetchChargingStations = useCallback(async (location, signal) => {
+        const query = `[out:json][timeout:25];(
+            node["amenity"="charging_station"](around:${SEARCH_RADIUS_METERS},${location.lat},${location.lng});
+            way["amenity"="charging_station"](around:${SEARCH_RADIUS_METERS},${location.lat},${location.lng});
+            relation["amenity"="charging_station"](around:${SEARCH_RADIUS_METERS},${location.lat},${location.lng});
+        );out center tags;`;
+
+        let lastError = null;
+
+        for (const endpoint of OVERPASS_ENDPOINTS) {
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+                    },
+                    body: `data=${encodeURIComponent(query)}`,
+                    signal
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Overpass request failed with ${response.status}`);
+                }
+
+                const data = await response.json();
+                const results = (data.elements || [])
+                    .map((element, index) => {
+                        const coordinates = element.type === 'node' ? { lat: element.lat, lng: element.lon } : element.center;
+                        if (!coordinates) {
+                            return null;
+                        }
+
+                        return normalizeStation(element, coordinates, location, index);
+                    })
+                    .filter(Boolean)
+                    .sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance))
+                    .slice(0, 25);
+
+                if (results.length > 0) {
+                    return results;
+                }
+
+                lastError = new Error('No charging stations returned from this endpoint.');
+            } catch (error) {
+                lastError = error;
+            }
+        }
+
+        throw lastError || new Error('Unable to load charging stations.');
     }, []);
 
-    const deg2rad = (deg) => {
-        return deg * (Math.PI / 180);
-    };
-
-    // Get user's current location and calculate distances
     useEffect(() => {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    const location = {
-                        lat: position.coords.latitude,
-                        lng: position.coords.longitude
-                    };
-                    setUserLocation(location);
+        let active = true;
 
-                    // Add distance to each station and sort by distance
-                    const stationsWithDistance = tataChargingStations.map(station => ({
-                        ...station,
-                        distance: calculateDistance(
-                            location.lat,
-                            location.lng,
-                            station.lat,
-                            station.lng
-                        )
-                    })).sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
-
-                    setStations(stationsWithDistance);
-                    setLoading(false);
-                },
-                (error) => {
-                    console.error("Error getting location:", error);
-                    setError("Unable to get your location. Showing default Delhi location.");
-                    // Use default location (Delhi) if user denies location
-                    const defaultLocation = { lat: 28.6139, lng: 77.2090 };
-                    setUserLocation(defaultLocation);
-
-                    const stationsWithDistance = tataChargingStations.map(station => ({
-                        ...station,
-                        distance: calculateDistance(
-                            defaultLocation.lat,
-                            defaultLocation.lng,
-                            station.lat,
-                            station.lng
-                        )
-                    })).sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
-
-                    setStations(stationsWithDistance);
-                    setLoading(false);
-                }
-            );
-        } else {
-            setError("Geolocation is not supported by your browser.");
+        if (!navigator.geolocation) {
+            setError('Geolocation is not supported by your browser. Enable location to see nearby charging stations.');
             setLoading(false);
+            return () => {
+                active = false;
+            };
         }
-    }, [calculateDistance, tataChargingStations]);
 
-    // Initialize Google Map
-    useEffect(() => {
-        if (!userLocation || !window.google) return;
-
-        const mapInstance = new window.google.maps.Map(document.getElementById('map'), {
-            center: userLocation,
-            zoom: 11,
-            mapTypeControl: true,
-            streetViewControl: false,
-            fullscreenControl: true,
-            styles: [
-                {
-                    "elementType": "geometry",
-                    "stylers": [{ "color": "#212121" }]
-                },
-                {
-                    "elementType": "labels.icon",
-                    "stylers": [{ "visibility": "off" }]
-                },
-                {
-                    "elementType": "labels.text.fill",
-                    "stylers": [{ "color": "#757575" }]
-                },
-                {
-                    "elementType": "labels.text.stroke",
-                    "stylers": [{ "color": "#212121" }]
-                },
-                {
-                    "featureType": "administrative",
-                    "elementType": "geometry",
-                    "stylers": [{ "color": "#757575" }]
-                },
-                {
-                    "featureType": "poi",
-                    "elementType": "labels.text.fill",
-                    "stylers": [{ "color": "#757575" }]
-                },
-                {
-                    "featureType": "poi.park",
-                    "elementType": "geometry",
-                    "stylers": [{ "color": "#181818" }]
-                },
-                {
-                    "featureType": "poi.park",
-                    "elementType": "labels.text.fill",
-                    "stylers": [{ "color": "#616161" }]
-                },
-                {
-                    "featureType": "road",
-                    "elementType": "geometry.fill",
-                    "stylers": [{ "color": "#2c2c2c" }]
-                },
-                {
-                    "featureType": "road",
-                    "elementType": "labels.text.fill",
-                    "stylers": [{ "color": "#8a8a8a" }]
-                },
-                {
-                    "featureType": "water",
-                    "elementType": "geometry",
-                    "stylers": [{ "color": "#000000" }]
-                },
-                {
-                    "featureType": "water",
-                    "elementType": "labels.text.fill",
-                    "stylers": [{ "color": "#3d3d3d" }]
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                if (!active) {
+                    return;
                 }
-            ]
-        });
 
-        setMap(mapInstance);
+                setUserLocation({
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                });
+            },
+            () => {
+                if (!active) {
+                    return;
+                }
 
-        // Add user location marker
-        new window.google.maps.Marker({
-            position: userLocation,
-            map: mapInstance,
-            title: "Your Location",
-            icon: {
-                path: window.google.maps.SymbolPath.CIRCLE,
-                scale: 10,
-                fillColor: "#FFD700",
-                fillOpacity: 1,
-                strokeColor: "#ffffff",
-                strokeWeight: 2,
+                setError('Location access was denied. Enable location to see nearby charging stations.');
+                setLoading(false);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 60000
             }
-        });
+        );
 
-        // Add charging station markers
-        stations.forEach((station) => {
-            const marker = new window.google.maps.Marker({
-                position: { lat: station.lat, lng: station.lng },
-                map: mapInstance,
-                title: station.name,
-                icon: {
-                    url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="${station.available ? '#4CAF50' : '#F44336'}">
-              <path d="M14.5 11l-3 6v-4h-2l3-6v4h2M17 3H7v1h10V3m0 17v-1H7v1l-2-2v-3h1V7H5v2H3V7c0-1.11.89-2 2-2h1V3c0-.55.45-1 1-1h10c.55 0 1 .45 1 1v2h1c1.11 0 2 .89 2 2v2h-2V7h-1v8h1v-3h2v5l-2 2M9 5h6v11h-2v2h2v1H9v-1h2v-2H9V5z"/>
-            </svg>
-          `),
-                    scaledSize: new window.google.maps.Size(40, 40),
+        return () => {
+            active = false;
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!userLocation) {
+            return undefined;
+        }
+
+        const controller = new AbortController();
+        let active = true;
+
+        const loadStations = async () => {
+            setLoading(true);
+
+            try {
+                const results = await fetchChargingStations(userLocation, controller.signal);
+
+                if (!active) {
+                    return;
                 }
-            });
 
-            // Add click listener to marker
-            marker.addListener('click', () => {
-                setSelectedStation(station);
-                mapInstance.panTo({ lat: station.lat, lng: station.lng });
-                mapInstance.setZoom(14);
-            });
-        });
-    }, [userLocation, stations]);
+                setStations(results);
+                setSelectedStation(null);
+            } catch (error) {
+                if (!active || controller.signal.aborted) {
+                    return;
+                }
+
+                console.error('Error loading charging stations:', error);
+                setStations([]);
+                setSelectedStation(null);
+                setError('Unable to load live charging stations right now. Please try again later.');
+            } finally {
+                if (active) {
+                    setLoading(false);
+                }
+            }
+        };
+
+        loadStations();
+
+        return () => {
+            active = false;
+            controller.abort();
+        };
+    }, [fetchChargingStations, userLocation]);
 
     const handleStationClick = (station) => {
         setSelectedStation(station);
-        if (map) {
-            map.panTo({ lat: station.lat, lng: station.lng });
-            map.setZoom(14);
-        }
     };
 
     const handleGetDirections = (station) => {
-        const url = `https://www.google.com/maps/dir/?api=1&destination=${station.lat},${station.lng}`;
-        window.open(url, '_blank');
+        window.open(buildDirectionsUrl(userLocation, station), '_blank', 'noopener,noreferrer');
     };
 
     if (loading) {
@@ -553,7 +286,7 @@ const ChargingStations = () => {
             <div className="charging-stations-container">
                 <div className="loading">
                     <div className="spinner"></div>
-                    <p>Finding charging stations near you...</p>
+                    <p>Finding live charging stations near you...</p>
                 </div>
             </div>
         );
@@ -562,33 +295,80 @@ const ChargingStations = () => {
     return (
         <div className="charging-stations-container">
             <header className="charging-header">
-                <h1>Tata EV Charging Stations</h1>
-                <p>Find the nearest Tata Power EZ Charge stations near you</p>
+                <h1>Live EV Charging Points</h1>
+                <p>Nearby public charging stations shown on the Carto Voyager basemap, centered on your location.</p>
                 {error && <div className="error-message">⚠️ {error}</div>}
             </header>
 
             <div className="charging-content">
                 <div className="map-section">
-                    <div id="map" className="map"></div>
+                    <MapContainer
+                        id="map"
+                        className="map"
+                        center={mapCenter}
+                        zoom={12}
+                        scrollWheelZoom
+                        key={`${mapCenter[0]}-${mapCenter[1]}`}
+                    >
+                        <MapViewController center={mapCenter} zoom={12} />
+                        <TileLayer
+                            attribution={TILE_LAYER_ATTRIBUTION}
+                            url={TILE_LAYER_URL}
+                        />
+
+                        {userLocation && (
+                            <Marker position={userLocation} icon={userLocationIcon}>
+                                <Popup>
+                                    <strong>Your current location</strong>
+                                    <br />
+                                    Nearby charging stations are sorted by distance.
+                                </Popup>
+                            </Marker>
+                        )}
+
+                        {stations.map((station) => (
+                            <Marker
+                                key={station.id}
+                                position={[station.lat, station.lng]}
+                                icon={buildStationIcon(station.isPublic)}
+                                eventHandlers={{
+                                    click: () => handleStationClick(station)
+                                }}
+                            >
+                                <Popup>
+                                    <strong>{station.name}</strong>
+                                    <br />
+                                    {station.address}
+                                    <br />
+                                    {station.distance ? `${station.distance} km away` : 'Nearby'}
+                                </Popup>
+                            </Marker>
+                        ))}
+                    </MapContainer>
+
                     <div className="map-legend">
                         <div className="legend-item">
                             <span className="legend-dot available"></span>
-                            <span>Available</span>
+                            <span>Public station</span>
                         </div>
                         <div className="legend-item">
                             <span className="legend-dot unavailable"></span>
-                            <span>In Use</span>
+                            <span>Restricted access</span>
                         </div>
                         <div className="legend-item">
                             <span className="legend-dot user"></span>
-                            <span>Your Location</span>
+                            <span>Your location</span>
                         </div>
                     </div>
                 </div>
 
                 <div className="stations-list">
                     <h2>Nearby Stations ({stations.length})</h2>
-                    {stations.map((station) => (
+                    {stations.length === 0 ? (
+                        <div className="station-card">
+                            <p className="station-address">No public charging stations were found within the current search area.</p>
+                        </div>
+                    ) : stations.map((station) => (
                         <div
                             key={station.id}
                             className={`station-card ${selectedStation?.id === station.id ? 'selected' : ''}`}
@@ -596,15 +376,19 @@ const ChargingStations = () => {
                         >
                             <div className="station-header">
                                 <h3>{station.name}</h3>
-                                <span className={`status-badge ${station.available ? 'available' : 'unavailable'}`}>
-                                    {station.available ? '✓ Available' : '⚡ In Use'}
+                                <span className={`status-badge ${station.isPublic ? 'available' : 'unavailable'}`}>
+                                    {station.isPublic ? 'Public' : 'Restricted'}
                                 </span>
                             </div>
                             <p className="station-address">📍 {station.address}</p>
                             <div className="station-details">
                                 <div className="detail-item">
-                                    <span className="detail-label">Type:</span>
-                                    <span className="detail-value">{station.type}</span>
+                                    <span className="detail-label">Operator:</span>
+                                    <span className="detail-value">{station.operator}</span>
+                                </div>
+                                <div className="detail-item">
+                                    <span className="detail-label">Connector:</span>
+                                    <span className="detail-value">{station.connector}</span>
                                 </div>
                                 <div className="detail-item">
                                     <span className="detail-label">Power:</span>
@@ -613,10 +397,6 @@ const ChargingStations = () => {
                                 <div className="detail-item">
                                     <span className="detail-label">Distance:</span>
                                     <span className="detail-value">{station.distance} km</span>
-                                </div>
-                                <div className="detail-item">
-                                    <span className="detail-label">Phone:</span>
-                                    <span className="detail-value">{station.phone}</span>
                                 </div>
                             </div>
                             <button

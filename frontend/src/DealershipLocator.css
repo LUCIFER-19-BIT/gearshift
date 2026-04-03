@@ -36,6 +36,47 @@
   margin: 0 auto;
 }
 
+.leaflet-div-icon {
+  background: transparent;
+  border: none;
+}
+
+.dealership-marker {
+  background: transparent;
+  border: none;
+}
+
+.dealership-marker__pin {
+  position: relative;
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  background: linear-gradient(135deg, #ffd700 0%, #ffb300 100%);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.35);
+}
+
+.dealership-marker__pin::after {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  background: #111;
+  transform: rotate(45deg);
+}
+
+.dealership-marker--user .dealership-marker__user-dot {
+  position: relative;
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #ffd700;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 0 6px rgba(255, 215, 0, 0.18);
+}
+
 /* Loading State */
 .loading {
   display: flex;
