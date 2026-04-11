@@ -38,7 +38,7 @@ const MapViewController = ({ center, zoom }) => {
 
     useEffect(() => {
         if (center) {
-            map.setView(center, zoom, { animate: true });
+            map.setView(center, zoom, { animate: false });
         }
     }, [center, zoom, map]);
 
@@ -47,6 +47,7 @@ const MapViewController = ({ center, zoom }) => {
 
 const DealershipLocator = () => {
     const [userLocation, setUserLocation] = useState(null);
+    const [locationAccuracy, setLocationAccuracy] = useState(null);
     const [dealerships, setDealerships] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -79,6 +80,7 @@ const DealershipLocator = () => {
                     lat: position.coords.latitude,
                     lng: position.coords.longitude
                 });
+                setLocationAccuracy(position.coords.accuracy || null);
             },
             () => {
                 if (!active) {
@@ -91,7 +93,7 @@ const DealershipLocator = () => {
             {
                 enableHighAccuracy: true,
                 timeout: 10000,
-                maximumAge: 60000
+                maximumAge: 0
             }
         );
 
@@ -168,6 +170,9 @@ const DealershipLocator = () => {
             <header className="dealership-header">
                 <h1>Live Tata Motors Dealerships</h1>
                 <p>Nearby Tata dealership locations within 30 km are shown on the Carto Voyager basemap around your current position.</p>
+                {locationAccuracy ? (
+                    <p className="location-accuracy">Current location accuracy: about {Math.round(locationAccuracy)} meters.</p>
+                ) : null}
                 {error && <div className="error-message">⚠️ {error}</div>}
             </header>
 
@@ -179,7 +184,6 @@ const DealershipLocator = () => {
                         center={mapCenter}
                         zoom={11}
                         scrollWheelZoom
-                        key={`${mapCenter[0]}-${mapCenter[1]}`}
                     >
                         <MapViewController center={mapCenter} zoom={11} />
                         <TileLayer

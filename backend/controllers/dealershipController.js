@@ -386,7 +386,7 @@ const fetchNominatimTataDealerships = async (location, signal) => {
 };
 
 const fetchOverpassTataDealerships = async (location, signal) => {
-    const overpassQuery = `[out:json][timeout:25];(
+  const overpassQuery = `[out:json][timeout:25];(
       node["amenity"="car_dealer"](around:30000,${location.lat},${location.lng});
       way["amenity"="car_dealer"](around:30000,${location.lat},${location.lng});
       relation["amenity"="car_dealer"](around:30000,${location.lat},${location.lng});

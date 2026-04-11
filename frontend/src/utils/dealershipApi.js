@@ -26,13 +26,15 @@ export const groupDealershipsByCity = (dealerships = []) => {
     }, {});
 };
 
-export const fetchNearbyTataDealerships = async (location = DEFAULT_LOCATION) => {
+export const fetchNearbyTataDealerships = async (location = DEFAULT_LOCATION, signal) => {
+
     const params = new URLSearchParams({
         lat: String(location.lat),
         lng: String(location.lng),
     });
 
     const response = await fetch(`${BACKEND_BASE_URL}/api/dealerships/nearby?${params.toString()}`, {
+        signal,
         headers: {
             Accept: 'application/json',
         },

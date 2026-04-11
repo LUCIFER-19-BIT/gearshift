@@ -404,7 +404,8 @@ const CarCircle = () => {
 
     setCurrentPhotoIndex(
       (previous) => (previous + 1) % selectedListing.imageUrls.length
-    };
+    );
+  };
 
   const getListingState = (listing) => listing.overview?.state || "Not Available";
 

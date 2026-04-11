@@ -20,6 +20,7 @@ import SUVs from "./pages/SUVs";
 import Bookings from "./pages/Bookings";
 import TestDrive from "./pages/TestDrive";
 import Recommendation from "./pages/Recommendation";
+import WhyEV from "./pages/whyev";
 import Parts from "./pages/parts";
 import Cart from "./pages/Cart";
 import Thank from "./pages/Thank";
@@ -47,6 +48,7 @@ function App() {
         <Route path="/suvs" element={<SUVs />} />
         <Route path="/esuv" element={<ESUV />} />
         <Route path="/recommendation" element={<Recommendation />} />
+        <Route path="/whyev" element={<WhyEV />} />
         <Route path="/curve" element={<Curve />} />
         <Route path="/harrier" element={<Harrier />} />
         <Route path="/punch" element={<Punch />} />

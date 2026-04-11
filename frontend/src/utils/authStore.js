@@ -34,6 +34,10 @@ const useAuthStore = create(
           if (response.ok) {
             const data = await response.json();
             set({ bookings: data });
+          } else if (response.status === 401) {
+            set({ user: null, bookings: [], testDrives: [] });
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
           } else {
             console.error("Failed to fetch bookings:", response.status);
           }
@@ -54,6 +58,10 @@ const useAuthStore = create(
           if (response.ok) {
             const data = await response.json();
             set({ testDrives: data });
+          } else if (response.status === 401) {
+            set({ user: null, bookings: [], testDrives: [] });
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
           } else {
             console.error("Failed to fetch test drives:", response.status);
           }

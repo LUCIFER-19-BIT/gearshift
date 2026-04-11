@@ -85,10 +85,10 @@ const isPublicAccess = (tags = {}) => {
 
 const buildDirectionsUrl = (from, to) => {
     if (!from || !to) {
-        return 'https://www.openstreetmap.org';
+        return 'https://www.google.com/maps';
     }
 
-    return `https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=${from.lat}%2C${from.lng}%3B${to.lat}%2C${to.lng}`;
+    return `https://www.google.com/maps/dir/?api=1&origin=${from.lat},${from.lng}&destination=${to.lat},${to.lng}`;
 };
 
 const MapViewController = ({ center, zoom }) => {

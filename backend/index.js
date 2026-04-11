@@ -32,6 +32,12 @@ const {
 const {
   getNearbyDealerships,
 } = require("./controllers/dealershipController");
+const {
+  fetchRouteChargers,
+} = require("./controllers/evChargerController");
+const {
+  recommendParts,
+} = require("./controllers/partsAiController");
 
 const app = express();
 
@@ -56,6 +62,8 @@ app.put("/api/carcircle/:id", auth, uploadCarCircleImages, validateCarBrand, upd
 app.delete("/api/carcircle/:id", auth, deleteCarCircleListing);
 
 app.get("/api/dealerships/nearby", getNearbyDealerships);
+app.post("/api/ev-chargers/route", fetchRouteChargers);
+app.post("/api/parts/ai-recommend", auth, recommendParts);
 
 // Cart routes
 app.post("/api/cart/items", auth, addCartItem);

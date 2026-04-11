@@ -13,6 +13,7 @@ export default function ESUV() {
       <header className="section-header">
         <h1>Explore Our Electric SUVs</h1>
         <p>Discover the future of driving with our range of electric SUVs combining sustainability and performance.</p>
+        <button className="btn-primary" onClick={() => navigate('/whyev')}>Why EV</button>
       </header>
       <div className="esuv-list">
         <article className="esuv-card">

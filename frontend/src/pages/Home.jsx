@@ -58,7 +58,7 @@ const Home = () => {
                     <div className="features-row">
                         <div className="feature-card">
                             <video
-                          className="feature-img"
+                                className="feature-img"
                                 src={techVideo}
                                 autoPlay
                                 loop
