@@ -1,11 +1,8 @@
 const User = require("../models/User");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-const JWT_SECRET = process.env.JWT_SECRET || "dev_secret_key";
+const { signAuthToken } = require("../library/authToken");
 
 const signup = async (req, res) => {
   try {
-    console.log("Received signup data:", req.body);
     const { username, email, password, address } = req.body;
 
     // Check if user already exists
@@ -22,9 +19,7 @@ const signup = async (req, res) => {
       address,
     });
 
-    console.log("Saving user...");
-    const savedUser = await user.save();
-    console.log("User saved:", savedUser);
+    await user.save();
 
     res.status(201).json({ message: "User created successfully" });
   } catch (error) {
@@ -51,7 +46,7 @@ const login = async (req, res) => {
     }
 
     // Generate token
-    const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "1h" });
+    const token = signAuthToken({ id: user._id });
 
     res.json({
       token,

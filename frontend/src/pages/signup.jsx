@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import blackwal from '../assets/blackwal.jpg';
+import { API_ENDPOINTS } from '../utils/apiConfig';
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -21,7 +22,7 @@ const Signup = () => {
       return;
     }
     try {
-      const response = await fetch('http://localhost:8001/api/signup', {
+      const response = await fetch(API_ENDPOINTS.signup, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

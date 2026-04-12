@@ -25,13 +25,38 @@ import Parts from "./pages/parts";
 import Cart from "./pages/Cart";
 import Thank from "./pages/Thank";
 import AutoSpace from "./pages/autospace";
+import Scrap from "./pages/scrap";
+import About from "./pages/about";
 import Header from "./components/header";
 import Footer from "./components/footer";
 import "./App.css";
 
 
-
-
+const appRoutes = [
+  ["/", Home],
+  ["/suvs", SUVs],
+  ["/esuv", ESUV],
+  ["/recommendation", Recommendation],
+  ["/whyev", WhyEV],
+  ["/curve", Curve],
+  ["/harrier", Harrier],
+  ["/harrier.jsx", Harrier],
+  ["/punch", Punch],
+  ["/tiago", Tiago],
+  ["/tigor", Tigor],
+  ["/nexon", Nexon],
+  ["/carcircle", CarCircle],
+  ["/parts", Parts],
+  ["/cart", Cart],
+  ["/thank", Thank],
+  ["/login", Login],
+  ["/signup", Signup],
+  ["/bookings", Bookings],
+  ["/about", About],
+  ["/testdrive", TestDrive],
+  ["/autospace", AutoSpace],
+  ["/scrap", Scrap],
+];
 
 function App() {
   const initAuth = useAuthStore((state) => state.init);
@@ -44,26 +69,9 @@ function App() {
     <>
       <Header />
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/suvs" element={<SUVs />} />
-        <Route path="/esuv" element={<ESUV />} />
-        <Route path="/recommendation" element={<Recommendation />} />
-        <Route path="/whyev" element={<WhyEV />} />
-        <Route path="/curve" element={<Curve />} />
-        <Route path="/harrier" element={<Harrier />} />
-        <Route path="/punch" element={<Punch />} />
-        <Route path="/tiago" element={<Tiago />} />
-        <Route path="/tigor" element={<Tigor />} />
-        <Route path="/nexon" element={<Nexon />} />
-        <Route path="/carcircle" element={<CarCircle />} />
-        <Route path="/parts" element={<Parts />} />
-        <Route path="/cart" element={<Cart />} />
-        <Route path="/thank" element={<Thank />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/bookings" element={<Bookings />} />
-        <Route path="/testdrive" element={<TestDrive />} />
-        <Route path="/autospace" element={<AutoSpace />} />
+        {appRoutes.map(([path, Component]) => (
+          <Route key={path} path={path} element={<Component />} />
+        ))}
       </Routes>
       <Footer />
     </>

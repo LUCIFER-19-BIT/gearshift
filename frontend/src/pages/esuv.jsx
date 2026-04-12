@@ -2,10 +2,10 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import artcurve from "../assets/artcurve.jpg";
 import Harrierev2 from "../assets/harrierev2.jpg";
-import punchImg from "../punchev.webp";
-import tiagoImg from "../tiagoev.webp";
-import tigorImg from "../tigorev.webp";
-import nexonImg from "../nexonev.webp";
+import punchImg from "../assets/vehicles/ev/punchev.webp";
+import tiagoImg from "../assets/vehicles/ev/tiagoev.webp";
+import tigorImg from "../assets/vehicles/ev/tigorev.webp";
+import nexonImg from "../assets/vehicles/ev/nexonev.webp";
 export default function ESUV() {
   const navigate = useNavigate();
   return (
@@ -26,7 +26,7 @@ export default function ESUV() {
           <img src={Harrierev2} alt="TATA harrier" className="esuv-image" />
           <h2>TATA HARRIER EV</h2>
           <p>Experience the power of electric with extended range and fast charging.</p>
-          <button className="btn-primary" onClick={() => navigate('/harrier')}>Learn More</button>
+          <button className="btn-primary" onClick={() => navigate('/harrier.jsx')}>Learn More</button>
         </article>
         <article className="esuv-card">
           <img src={punchImg} alt="TATA Punch" className="esuv-image" />

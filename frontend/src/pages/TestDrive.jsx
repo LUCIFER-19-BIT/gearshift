@@ -1,50 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import useAuthStore from "../utils/authStore";
 import { fetchNearbyTataDealerships, groupDealershipsByCity } from "../utils/dealershipApi";
-import testdriveImg from "../assets/testdrive.jpg";
+import { CAR_DISPLAY_NAMES, CAR_IMAGE_BY_MODEL, VARIANT_OPTIONS } from "../utils/carData";
+import { API_ENDPOINTS } from "../utils/apiConfig";
+import { parseDealershipValue } from "../utils/dealershipHelpers";
 import DealershipLocator from "../components/DealershipLocator";
-// Car model images
-import harrierImg from "../assets/harriyellow.png";
-import nexonImg2 from "../assets/nexonnew.png";
-import safariImg2 from "../assets/safarinew.png";
-import curvet from "../assets/curvet.png";
-import altrozImg2 from "../assets/altrozenew.png";
-import tiagoImg2 from "../assets/tiagonew.png";
-import punchImg from "../assets/punch.png";
-import tigorImg from "../assets/TIGOR/opal-white-right-39-Picsart-BackgroundRemover.png";
-const carImages = {
-    harrier: harrierImg,
-    nexon: nexonImg2,
-    safari: safariImg2,
-    curve: curvet,
-    altroz: altrozImg2,
-    tiago: tiagoImg2,
-    punch: punchImg,
-    tigor: tigorImg,
-};
-
-const carDisplayNames = {
-    harrier: "HARRIER",
-    nexon: "Nexon",
-    safari: "SAFARI",
-    curve: "CURVE",
-    altroz: "ALTROZ",
-    tiago: "TIAGO",
-    punch: "PUNCH",
-    tigor: "TIGOR",
-};
-
-const variantOptions = {
-    harrier: ["XE", "XM", "XT", "XZ", "XZ+"],
-    nexon: ["XE", "XM", "XT", "XZ", "XZ+"],
-    safari: ["XE", "XM", "XT", "XZ", "XZ+"],
-    curve: ["XE", "XM", "XT", "XZ", "XZ+"],
-    altroz: ["XE", "XM", "XT", "XZ", "XZ+"],
-    tiago: ["XE", "XM", "XT", "XZ", "XZ+"],
-    punch: ["XE", "XM", "XT", "XZ", "XZ+"],
-    tigor: ["XE", "XM", "XT", "XZ", "XZ+"],
-};
 
 const TestDrive = () => {
     const navigate = useNavigate();
@@ -59,14 +20,12 @@ const TestDrive = () => {
     const [pincode, setPincode] = useState("");
     const [selectedModel, setSelectedModel] = useState(initialModel || "");
     const [selectedVariant, setSelectedVariant] = useState("");
-    const [displayImage, setDisplayImage] = useState(initialImage || carImages[initialModel] || "");
+    const [displayImage, setDisplayImage] = useState(initialImage || CAR_IMAGE_BY_MODEL[initialModel] || "");
     const [selectedDealership, setSelectedDealership] = useState("");
     const [selectedCity, setSelectedCity] = useState("");
-    const [dealershipSearch, setDealershipSearch] = useState("");
     const [dealerships, setDealerships] = useState([]);
     const [dealershipLoading, setDealershipLoading] = useState(true);
     const [dealershipError, setDealershipError] = useState("");
-    const [userLocation, setUserLocation] = useState(null);
     const [locationError, setLocationError] = useState("");
 
     useEffect(() => {
@@ -80,7 +39,7 @@ const TestDrive = () => {
         let active = true;
 
         if (!navigator.geolocation) {
-            setLocationError("Enable location to load nearby Tata dealerships.");
+            setLocationError("Enable location to load Tata dealerships.");
             setDealershipLoading(false);
             return () => {
                 active = false;
@@ -98,7 +57,6 @@ const TestDrive = () => {
                     lng: position.coords.longitude,
                 };
 
-                setUserLocation(liveLocation);
                 setLocationError("");
 
                 try {
@@ -126,8 +84,8 @@ const TestDrive = () => {
                     return;
                 }
                 console.error("Geolocation error:", error);
-                setLocationError("Location access was denied. Enable location to load nearby Tata dealerships.");
-                setDealershipError("No live Tata dealerships available without location access.");
+                setLocationError("Location access was denied. Enable location to load Tata dealerships.");
+                setDealershipError("No Tata dealerships available without location access.");
                 setDealershipLoading(false);
                 setDealerships([]);
             },
@@ -145,49 +103,39 @@ const TestDrive = () => {
 
     useEffect(() => {
         if (selectedModel) {
-            setDisplayImage(carImages[selectedModel]);
+            setDisplayImage(CAR_IMAGE_BY_MODEL[selectedModel]);
         }
     }, [selectedModel]);
 
-    const dealershipsByCity = React.useMemo(() => {
+    const dealershipsByCity = useMemo(() => {
         return groupDealershipsByCity(dealerships);
     }, [dealerships]);
 
-    const filteredDealershipsByCity = React.useMemo(() => {
-        const search = dealershipSearch.trim().toLowerCase();
+    const filteredDealershipsByCity = useMemo(() => {
         return Object.keys(dealershipsByCity)
             .sort()
             .reduce((acc, city) => {
                 if (selectedCity && city !== selectedCity) {
                     return acc;
                 }
-                const dealers = dealershipsByCity[city].filter((dealer) => {
-                    if (!search) {
-                        return true;
-                    }
-                    return (
-                        dealer.name.toLowerCase().includes(search) ||
-                        dealer.address.toLowerCase().includes(search)
-                    );
-                });
+                const dealers = dealershipsByCity[city];
                 if (dealers.length > 0) {
                     acc[city] = dealers;
                 }
                 return acc;
             }, {});
-    }, [dealershipSearch, dealershipsByCity, selectedCity]);
+    }, [dealershipsByCity, selectedCity]);
 
-    const selectedDealershipInfo = React.useMemo(() => {
-        if (!selectedDealership) {
-            return null;
+    const dealershipGroupsForDropdown = useMemo(() => {
+        if (!selectedCity) {
+            return dealershipsByCity;
         }
-        try {
-            return typeof selectedDealership === "string"
-                ? JSON.parse(selectedDealership)
-                : selectedDealership;
-        } catch (error) {
-            return null;
-        }
+
+        return filteredDealershipsByCity;
+    }, [dealershipsByCity, filteredDealershipsByCity, selectedCity]);
+
+    const selectedDealershipInfo = useMemo(() => {
+        return parseDealershipValue(selectedDealership);
     }, [selectedDealership]);
 
     if (!user) {
@@ -222,7 +170,7 @@ const TestDrive = () => {
 
         const data = { firstName, lastName, mobile, email, pincode, model: selectedModel, variant: selectedVariant, dealership: selectedDealership };
         try {
-            const response = await fetch("http://localhost:8001/api/testdrive", {
+            const response = await fetch(API_ENDPOINTS.testDrive, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -232,7 +180,7 @@ const TestDrive = () => {
             });
             if (response.ok) {
                 alert("Test drive booked successfully");
-                fetchTestDrives(localStorage.getItem("token"));
+                fetchTestDrives();
             } else {
                 alert("Error booking test drive");
             }
@@ -241,7 +189,7 @@ const TestDrive = () => {
         }
     };
 
-    const availableVariants = variantOptions[selectedModel] || [];
+    const availableVariants = VARIANT_OPTIONS[selectedModel] || [];
 
     return (
         <>
@@ -337,7 +285,7 @@ const TestDrive = () => {
                                             setSelectedVariant("");
                                         }}
                                     >
-                                        {carDisplayNames[model]}
+                                        {CAR_DISPLAY_NAMES[model]}
                                     </button>
                                 ))}
                             </div>
@@ -381,25 +329,13 @@ const TestDrive = () => {
                                         ))}
                                 </select>
                             </div>
-                            <div className="form-group">
-                                <label>Search Dealership</label>
-                                <input
-                                    type="text"
-                                    value={dealershipSearch}
-                                    onChange={(e) => {
-                                        setDealershipSearch(e.target.value);
-                                        setSelectedDealership("");
-                                    }}
-                                    placeholder="Type area or showroom"
-                                />
-                            </div>
                         </div>
 
                         <div className="form-group">
                             <label>Select Dealership</label>
                             {dealershipLoading && (
                                 <p style={{ fontSize: "12px", color: "#666", marginBottom: "8px" }}>
-                                    Loading live Tata dealerships...
+                                    Loading Tata dealerships...
                                 </p>
                             )}
                             {locationError && (
@@ -419,14 +355,14 @@ const TestDrive = () => {
                                 disabled={dealershipLoading || dealerships.length === 0}
                             >
                                 <option value="">Select Preferred Dealership</option>
-                                {Object.keys(filteredDealershipsByCity).length > 0 ? (
-                                    Object.keys(filteredDealershipsByCity).map((city) => (
+                                {Object.keys(dealershipGroupsForDropdown).length > 0 ? (
+                                    Object.keys(dealershipGroupsForDropdown).map((city) => (
                                         <optgroup key={city} label={city}>
-                                            {filteredDealershipsByCity[city]
+                                            {dealershipGroupsForDropdown[city]
                                                 .sort((a, b) => (a.distance || 999) - (b.distance || 999))
                                                 .map((dealer) => (
                                                     <option key={dealer.id} value={JSON.stringify(dealer)}>
-                                                        {dealer.name} {dealer.distance ? `(${dealer.distance}km)` : ""}
+                                                        {dealer.name}
                                                     </option>
                                                 ))}
                                         </optgroup>
@@ -438,7 +374,7 @@ const TestDrive = () => {
                                                 .sort((a, b) => (a.distance || 999) - (b.distance || 999))
                                                 .map((dealer) => (
                                                     <option key={dealer.id} value={JSON.stringify(dealer)}>
-                                                        {dealer.name} {dealer.distance ? `(${dealer.distance}km)` : ""}
+                                                        {dealer.name}
                                                     </option>
                                                 ))}
                                         </optgroup>
@@ -483,7 +419,7 @@ const TestDrive = () => {
                         )}
                         <div className="summary-row">
                             <span>Model</span>
-                            <strong>{selectedModel ? carDisplayNames[selectedModel] : "Not selected"}</strong>
+                            <strong>{selectedModel ? CAR_DISPLAY_NAMES[selectedModel] : "Not selected"}</strong>
                         </div>
                         <div className="summary-row">
                             <span>Variant</span>
@@ -507,22 +443,7 @@ const TestDrive = () => {
                     </aside>
                 </div>
 
-                <div className="testdrive-content">
-                    <img
-                        src={testdriveImg}
-                        alt="Test Drive"
-                        className="testdrive-image"
-                    />
-                    <h1>Standard Test Drive</h1>
-                    <p>Up to 1 hour</p>
-                    <p>
-                        Go on a test drive with one of our expert representatives. You can
-                        either drive out from the dealership itself or have the car reach
-                        your home. Either way, you'll experience a drive like no other.
-                    </p>
-                    <h3>Price</h3>
-                    <p>Free</p>
-                </div>
+                
             </section>
             {/* Dealership Locator Section */}
             <DealershipLocator />

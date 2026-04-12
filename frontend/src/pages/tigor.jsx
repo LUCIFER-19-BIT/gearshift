@@ -1,10 +1,10 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import TigorImg from '../tigorev.webp';
-import tigorContrastBlackImg from '../contrast-black-roof.avif';
-import tigorDashboardImg from '../dash-board.avif';
-import tigorVid from '../tigorvid.mp4';
-import tigorVid2 from '../tigorvid2.mp4';
+import TigorImg from '../assets/vehicles/ev/tigorev.webp';
+import tigorContrastBlackImg from '../assets/vehicles/tigor/contrast-black-roof.avif';
+import tigorDashboardImg from '../assets/vehicles/tigor/dash-board.avif';
+import tigorVid from '../assets/vehicles/tigor/tigorvid.mp4';
+import tigorVid2 from '../assets/vehicles/tigor/tigorvid2.mp4';
 import ChargingStations from '../components/ChargingStations';
 import '../curve.css';
 

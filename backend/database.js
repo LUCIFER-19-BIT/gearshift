@@ -13,8 +13,18 @@ mongoose
     // Mongoose v8 uses sensible defaults; keep options explicit for clarity
     useNewUrlParser: true,
     useUnifiedTopology: true,
+    dbName: "test",
   })
-  .then(() => console.log("MongoDB connected"))
+  .then(async () => {
+    try {
+      await mongoose.connection.db.createCollection("parts");
+    } catch (error) {
+      if (error?.codeName !== "NamespaceExists") {
+        throw error;
+      }
+    }
+    console.log("MongoDB connected (db: test)");
+  })
   .catch((err) => console.error("MongoDB connection error:", err));
 
 module.exports = mongoose;

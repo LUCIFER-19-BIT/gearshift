@@ -4,7 +4,10 @@
 
 .cart-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3a 100%);
+  background: 
+    radial-gradient(circle at top right, rgba(255, 215, 0, 0.12), transparent 30%),
+    radial-gradient(circle at bottom left, rgba(255, 183, 77, 0.08), transparent 30%),
+    var(--bg-dark-secondary);
   padding: 120px 20px 60px;
   margin-top: var(--navbar-height);
   font-family: var(--font-primary);
@@ -59,18 +62,20 @@
 .btn-continue {
   background: linear-gradient(135deg, #ffd700, #ffed4e);
   color: #000;
-  padding: 12px 30px;
+  padding: 14px 40px;
   border: none;
   border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: 1.05rem;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.3s ease;
+  letter-spacing: 0.5px;
+  box-shadow: 0 6px 20px rgba(255, 215, 0, 0.3);
 }
 
 .btn-continue:hover {
   transform: translateY(-3px);
-  box-shadow: 0 10px 25px rgba(255, 215, 0, 0.3);
+  box-shadow: 0 10px 30px rgba(255, 215, 0, 0.45);
 }
 
 /* Main Cart Content */
@@ -94,15 +99,17 @@
 .product-summary {
   background: linear-gradient(
     135deg,
-    rgba(255, 215, 0, 0.05) 0%,
-    rgba(255, 215, 0, 0.02) 100%
+    var(--bg-dark-card) 0%,
+    rgba(255, 215, 0, 0.03) 100%
   );
-  border: 2px solid rgba(255, 215, 0, 0.2);
-  border-radius: 16px;
+  border: 2px solid rgba(255, 215, 0, 0.3);
+  border-left: 4px solid var(--accent-color);
+  border-radius: 12px;
   padding: 30px;
   height: fit-content;
   position: sticky;
   top: 100px;
+  box-shadow: 0 8px 32px rgba(255, 215, 0, 0.1);
 }
 
 .product-summary h2 {
@@ -126,10 +133,17 @@
   justify-content: space-between;
   align-items: center;
   gap: 10px;
-  background: var(--bg-dark-card);
-  border: 1px solid rgba(255, 215, 0, 0.15);
+  background: rgba(255, 215, 0, 0.05);
+  border: 1px solid rgba(255, 215, 0, 0.25);
+  border-left: 3px solid var(--accent-color);
   border-radius: 8px;
-  padding: 10px 12px;
+  padding: 12px 14px;
+  transition: all 0.3s ease;
+}
+
+.cart-item-row:hover {
+  background: rgba(255, 215, 0, 0.08);
+  border-color: rgba(255, 215, 0, 0.4);
 }
 
 .cart-item-meta {
@@ -160,18 +174,28 @@
 }
 
 .product-card-summary {
-  background: var(--bg-dark-card);
-  border: 1px solid rgba(255, 215, 0, 0.15);
+  background: linear-gradient(
+    135deg,
+    var(--bg-dark-card) 0%,
+    rgba(255, 215, 0, 0.02) 100%
+  );
+  border: 2px solid rgba(255, 215, 0, 0.25);
   border-radius: 12px;
-  padding: 20px;
+  padding: 25px;
   display: flex;
   flex-direction: column;
   gap: 20px;
+  box-shadow: 0 4px 16px rgba(255, 215, 0, 0.08);
 }
 
 .product-image-section {
-  background: linear-gradient(135deg, #0a0e27 0%, #1a1a3a 100%);
-  border-radius: 10px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 215, 0, 0.05) 0%,
+    rgba(0, 0, 0, 0.5) 100%
+  );
+  border: 2px solid rgba(255, 215, 0, 0.2);
+  border-radius: 12px;
   padding: 15px;
   display: flex;
   justify-content: center;
@@ -220,9 +244,14 @@
   display: flex;
   flex-direction: column;
   gap: 5px;
-  padding: 12px;
-  background: rgba(255, 215, 0, 0.05);
+  padding: 14px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 215, 0, 0.08),
+    rgba(255, 215, 0, 0.03)
+  );
   border-radius: 8px;
+  border: 1px solid rgba(255, 215, 0, 0.2);
   border-left: 3px solid var(--accent-color);
 }
 
@@ -246,23 +275,27 @@
 
 .stock-badge {
   display: inline-block;
-  background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
-  color: white;
-  padding: 4px 8px;
-  border-radius: 4px;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 215, 0, 0.1));
+  border: 1px solid rgba(255, 215, 0, 0.4);
+  color: var(--accent-color);
+  padding: 6px 12px;
+  border-radius: 6px;
   font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
 }
 
 .order-total {
   background: linear-gradient(
     135deg,
-    rgba(255, 215, 0, 0.1) 0%,
+    rgba(255, 215, 0, 0.12) 0%,
     rgba(255, 215, 0, 0.05) 100%
   );
-  border: 1px solid rgba(255, 215, 0, 0.2);
+  border: 2px solid rgba(255, 215, 0, 0.3);
   border-radius: 12px;
-  padding: 20px;
+  padding: 25px;
   text-align: center;
+  box-shadow: 0 8px 24px rgba(255, 215, 0, 0.15);
 }
 
 .order-total h3 {
@@ -296,12 +329,14 @@
 .checkout-form-section {
   background: linear-gradient(
     135deg,
-    rgba(255, 215, 0, 0.05) 0%,
-    rgba(255, 215, 0, 0.02) 100%
+    var(--bg-dark-card) 0%,
+    rgba(255, 215, 0, 0.03) 100%
   );
-  border: 2px solid rgba(255, 215, 0, 0.2);
-  border-radius: 16px;
+  border: 2px solid rgba(255, 215, 0, 0.3);
+  border-left: 4px solid var(--accent-color);
+  border-radius: 12px;
   padding: 30px;
+  box-shadow: 0 8px 32px rgba(255, 215, 0, 0.1);
 }
 
 .checkout-form-section h2 {
@@ -333,8 +368,12 @@
 
 .form-input,
 .form-textarea {
-  background: var(--bg-dark-card);
-  border: 2px solid rgba(255, 215, 0, 0.15);
+  background: linear-gradient(
+    135deg,
+    var(--bg-dark-card) 0%,
+    rgba(255, 215, 0, 0.02) 100%
+  );
+  border: 2px solid rgba(255, 215, 0, 0.2);
   border-radius: 8px;
   padding: 12px 15px;
   color: var(--text-light-primary);
@@ -349,10 +388,10 @@
   border-color: var(--accent-color);
   background: linear-gradient(
     135deg,
-    rgba(255, 215, 0, 0.05),
-    rgba(255, 215, 0, 0.02)
+    var(--bg-dark-card) 0%,
+    rgba(255, 215, 0, 0.08)
   );
-  box-shadow: 0 0 15px rgba(255, 215, 0, 0.2);
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.25), inset 0 0 8px rgba(255, 215, 0, 0.1);
 }
 
 .form-textarea {
@@ -361,10 +400,15 @@
 }
 
 .form-group.payment-info {
-  background: rgba(255, 215, 0, 0.08);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 215, 0, 0.1) 0%,
+    rgba(255, 215, 0, 0.04) 100%
+  );
   padding: 20px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 215, 0, 0.15);
+  border: 2px solid rgba(255, 215, 0, 0.3);
+  box-shadow: 0 4px 16px rgba(255, 215, 0, 0.1);
 }
 
 .payment-method-display {
@@ -376,11 +420,13 @@
 .badge-cod {
   background: linear-gradient(135deg, #ffd700, #ffed4e);
   color: #000;
-  padding: 10px 15px;
-  border-radius: 6px;
-  font-weight: 600;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-weight: 700;
   display: inline-block;
   width: fit-content;
+  box-shadow: 0 4px 16px rgba(255, 215, 0, 0.3);
+  letter-spacing: 0.5px;
 }
 
 .payment-method-display p {
@@ -441,26 +487,29 @@
 
 .btn-cancel {
   background: transparent;
-  border: 2px solid rgba(255, 215, 0, 0.3);
-  color: var(--text-light-primary);
+  border: 2px solid rgba(255, 215, 0, 0.4);
+  color: var(--accent-color);
+  transition: all 0.3s ease;
 }
 
 .btn-cancel:hover:not(:disabled) {
-  background: rgba(255, 215, 0, 0.1);
+  background: rgba(255, 215, 0, 0.15);
   border-color: var(--accent-color);
   color: var(--accent-color);
+  box-shadow: 0 4px 16px rgba(255, 215, 0, 0.2);
 }
 
 .btn-place-order {
   background: linear-gradient(135deg, #ffd700, #ffed4e);
   color: #000;
   font-weight: 700;
-  box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
+  box-shadow: 0 6px 20px rgba(255, 215, 0, 0.35);
+  letter-spacing: 0.5px;
 }
 
 .btn-place-order:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(255, 215, 0, 0.4);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 30px rgba(255, 215, 0, 0.5);
 }
 
 .btn-cancel:disabled,

@@ -1,13 +1,16 @@
 const TestDrive = require('../models/TestDrive');
+const { ensureAuthenticatedUser } = require('../library/authHelper');
 
 const createTestDrive = async (req, res) => {
   try {
-    console.log('Received test drive data:', req.body);
     const { firstName, lastName, mobile, email, pincode, model, variant, dealership } = req.body;
+
+    const userId = ensureAuthenticatedUser(req, res);
+    if (!userId) return;
 
     // Create test drive
     const testDrive = new TestDrive({
-      userId: req.user.id,
+      userId,
       firstName,
       lastName,
       mobile,
@@ -18,9 +21,7 @@ const createTestDrive = async (req, res) => {
       dealership,
     });
 
-    console.log('Saving test drive...');
     const savedTestDrive = await testDrive.save();
-    console.log('Test drive saved:', savedTestDrive);
 
     res.status(201).json({ message: 'Test drive created successfully', testDrive: savedTestDrive });
   } catch (error) {
@@ -31,7 +32,10 @@ const createTestDrive = async (req, res) => {
 
 const getTestDrives = async (req, res) => {
   try {
-    const testDrives = await TestDrive.find({ userId: req.user.id });
+    const userId = ensureAuthenticatedUser(req, res);
+    if (!userId) return;
+
+    const testDrives = await TestDrive.find({ userId });
     res.json(testDrives);
   } catch (error) {
     console.error('Error fetching test drives:', error);
@@ -39,4 +43,23 @@ const getTestDrives = async (req, res) => {
   }
 };
 
-module.exports = { createTestDrive, getTestDrives };
+const cancelTestDrive = async (req, res) => {
+  try {
+    const userId = ensureAuthenticatedUser(req, res);
+    if (!userId) return;
+    const { id } = req.params;
+
+    const deletedTestDrive = await TestDrive.findOneAndDelete({ _id: id, userId });
+
+    if (!deletedTestDrive) {
+      return res.status(404).json({ message: 'Test drive not found' });
+    }
+
+    return res.json({ message: 'Test drive cancelled successfully' });
+  } catch (error) {
+    console.error('Error cancelling test drive:', error);
+    return res.status(500).json({ message: 'Server error' });
+  }
+};
+
+module.exports = { createTestDrive, getTestDrives, cancelTestDrive };

@@ -8,10 +8,12 @@ const { signup, login } = require("./controllers/authController");
 const {
   createBooking,
   getBookings,
+  cancelBooking,
 } = require("./controllers/bookingController");
 const {
   createTestDrive,
   getTestDrives,
+  cancelTestDrive,
 } = require("./controllers/testDriveController");
 const {
   uploadCarCircleImages,
@@ -28,6 +30,7 @@ const {
   createOrder,
   getOrders,
   getOrderById,
+  cancelOrder,
 } = require("./controllers/cartController");
 const {
   getNearbyDealerships,
@@ -38,6 +41,9 @@ const {
 const {
   recommendParts,
 } = require("./controllers/partsAiController");
+const {
+  analyzeScrapDiscount,
+} = require("./controllers/scrapController");
 
 const app = express();
 
@@ -52,9 +58,11 @@ app.post("/api/signup", signup);
 app.post("/api/login", login);
 app.post("/api/booking", auth, createBooking);
 app.get("/api/bookings", auth, getBookings);
+app.delete("/api/bookings/:id", auth, cancelBooking);
 
 app.post("/api/testdrive", auth, createTestDrive);
 app.get("/api/testdrives", auth, getTestDrives);
+app.delete("/api/testdrives/:id", auth, cancelTestDrive);
 
 app.post("/api/carcircle", auth, uploadCarCircleImages, validateCarBrand, createCarCircleListing);
 app.get("/api/carcircle", auth, getCarCircleListings);
@@ -64,6 +72,7 @@ app.delete("/api/carcircle/:id", auth, deleteCarCircleListing);
 app.get("/api/dealerships/nearby", getNearbyDealerships);
 app.post("/api/ev-chargers/route", fetchRouteChargers);
 app.post("/api/parts/ai-recommend", auth, recommendParts);
+app.post("/api/scrap/analyze", analyzeScrapDiscount);
 
 // Cart routes
 app.post("/api/cart/items", auth, addCartItem);
@@ -73,6 +82,7 @@ app.delete("/api/cart/items/:id", auth, removeCartItem);
 app.post("/api/cart", auth, createOrder);
 app.get("/api/cart", auth, getOrders);
 app.get("/api/cart/:id", auth, getOrderById);
+app.patch("/api/cart/:id/cancel", auth, cancelOrder);
 
 const PORT = process.env.PORT || 8001;
 app.listen(PORT, () => {

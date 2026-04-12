@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import safariImg from "../assets/hexa.jpg";
-import safari2Img from "../assets/aria.jpg";
-import nexonImg from "../assets/nexon.jpg";
-import mahinImg from "../assets/strome.jpg";
+import home2Img from "../assets/home2.avif";
+import home3Img from "../assets/home3.avif";
+import home4Img from "../assets/home4.avif";
+import home5Img from "../assets/home5.avif";
 // Feature videos
 import techVideo from "../assets/tatatech.mp4";
 import designVideo from "../assets/tatade.mp4";
@@ -17,12 +17,44 @@ import unlimitPerfImg from "../assets/curve2.jpg";
 
 const Home = () => {
     // top hero slider images
-    const images = [safariImg, safari2Img, nexonImg, mahinImg];
+    const images = [home2Img, home3Img, home4Img, home5Img];
     const [current, setCurrent] = useState(0);
+    const [previous, setPrevious] = useState(null);
+    const [transitionDirection, setTransitionDirection] = useState("next");
+    const [isAnimating, setIsAnimating] = useState(false);
+    const animationTimerRef = useRef(null);
 
-    const handleNext = () => setCurrent((p) => (p + 1) % images.length);
-    const handlePrev = () =>
-        setCurrent((p) => (p - 1 + images.length) % images.length);
+    useEffect(() => {
+        return () => {
+            if (animationTimerRef.current) {
+                clearTimeout(animationTimerRef.current);
+            }
+        };
+    }, []);
+
+    const changeSlide = (direction) => {
+        if (isAnimating) return;
+
+        setTransitionDirection(direction);
+        setPrevious(current);
+
+        setCurrent((p) => {
+            if (direction === "next") {
+                return (p + 1) % images.length;
+            }
+            return (p - 1 + images.length) % images.length;
+        });
+
+        setIsAnimating(true);
+
+        animationTimerRef.current = setTimeout(() => {
+            setPrevious(null);
+            setIsAnimating(false);
+        }, 550);
+    };
+
+    const handleNext = () => changeSlide("next");
+    const handlePrev = () => changeSlide("prev");
 
     return (
         <div className="home-container">
@@ -36,7 +68,27 @@ const Home = () => {
                     >
                         &#8592;
                     </button>
-                    <img src={images[current]} alt="Slide" className="hero-img" />
+                    {previous !== null ? (
+                        <img
+                            src={images[previous]}
+                            alt="Previous slide"
+                            className={`hero-img hero-img-leaving ${
+                                transitionDirection === "next" ? "slide-out-left" : "slide-out-right"
+                            }`}
+                        />
+                    ) : null}
+
+                    <img
+                        src={images[current]}
+                        alt="Slide"
+                        className={`hero-img ${
+                            isAnimating
+                                ? `hero-img-entering ${
+                                      transitionDirection === "next" ? "slide-in-right" : "slide-in-left"
+                                  }`
+                                : "hero-img-static"
+                        }`}
+                    />
                     <button
                         className="arrow-btn right"
                         onClick={handleNext}
@@ -48,9 +100,9 @@ const Home = () => {
 
                 {}
                 <section className="features-section">
-                    <h1>We Are Tata Motors</h1>
+                    <h1>Shift Into The Future</h1>
                     <p className="features-desc">
-                        We make authentic SUVs that help you explore the impossible.
+                        We Provide Authentic SUVs that help you explore the impossible.
                         Experience the best in tech, design, safety and comfort in our range
                         of products made in India, for the world.
                     </p>

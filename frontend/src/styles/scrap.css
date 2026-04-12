@@ -1,0 +1,199 @@
+.scrap-page {
+	min-height: calc(100vh - var(--navbar-height));
+	padding: calc(var(--navbar-height) + 24px) 16px 32px;
+	background:
+		radial-gradient(circle at top right, rgba(255, 191, 64, 0.18), transparent 42%),
+		radial-gradient(circle at bottom left, rgba(232, 166, 36, 0.14), transparent 36%),
+		#0b0b0b;
+}
+
+.scrap-wrapper {
+	max-width: 920px;
+	margin: 0 auto;
+}
+
+.scrap-card {
+	border: 1px solid rgba(255, 196, 84, 0.28);
+	background: linear-gradient(155deg, rgba(24, 24, 24, 0.95), rgba(14, 14, 14, 0.95));
+	border-radius: 16px;
+	backdrop-filter: blur(8px);
+	padding: 24px;
+	color: #f7f2e5;
+}
+
+.scrap-card h1 {
+	margin: 0 0 10px;
+}
+
+.scrap-card p {
+	color: #d9cdb1;
+}
+
+.scrap-selected-car {
+	margin-top: 16px;
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+	gap: 12px;
+}
+
+.scrap-selected-car div {
+	border: 1px solid rgba(255, 196, 84, 0.2);
+	border-radius: 12px;
+	padding: 12px;
+	background: rgba(255, 209, 122, 0.04);
+}
+
+.scrap-selected-car span {
+	display: block;
+	font-size: 0.8rem;
+	color: #c9b48b;
+	margin-bottom: 6px;
+}
+
+.scrap-upload-label {
+	display: inline-block;
+	margin-top: 22px;
+	margin-bottom: 8px;
+	font-weight: 600;
+}
+
+.scrap-file-input {
+	width: 100%;
+	border: 1px dashed rgba(255, 196, 84, 0.52);
+	border-radius: 12px;
+	padding: 12px;
+	color: #f7f2e5;
+	background: rgba(255, 221, 158, 0.03);
+}
+
+.scrap-preview-box {
+	margin-top: 14px;
+	border-radius: 14px;
+	overflow: hidden;
+	border: 1px solid rgba(255, 196, 84, 0.25);
+}
+
+.scrap-preview-image {
+	width: 100%;
+	max-height: 360px;
+	object-fit: cover;
+	display: block;
+}
+
+.scrap-actions {
+	margin-top: 16px;
+	display: flex;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+
+.scrap-btn {
+	border: none;
+	border-radius: 10px;
+	padding: 11px 16px;
+	font-weight: 700;
+	cursor: pointer;
+}
+
+.scrap-btn.primary {
+	background: linear-gradient(135deg, #d9a441, #f9ce73);
+	color: #1a1406;
+}
+
+.scrap-btn.primary:disabled {
+	opacity: 0.7;
+	cursor: not-allowed;
+}
+
+.scrap-btn.ghost {
+	background: transparent;
+	color: #e5d7ba;
+	border: 1px solid rgba(255, 196, 84, 0.35);
+}
+
+.scrap-error {
+	color: #ffb4a8;
+	margin-top: 10px;
+}
+
+.scrap-result-card {
+	margin-top: 20px;
+	padding-top: 18px;
+	border-top: 1px solid rgba(255, 196, 84, 0.2);
+}
+
+.scrap-result-card h2 {
+	margin: 0 0 12px;
+}
+
+.scrap-result-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+	gap: 10px;
+}
+
+.scrap-result-grid div {
+	border: 1px solid rgba(255, 196, 84, 0.22);
+	border-radius: 10px;
+	padding: 10px;
+	background: rgba(255, 208, 116, 0.03);
+}
+
+.scrap-result-grid span {
+	display: block;
+	color: #c9b48b;
+	font-size: 0.8rem;
+	margin-bottom: 6px;
+}
+
+.scrap-condition-note {
+	margin: 14px 0 0;
+	color: #dcc9a2;
+}
+
+.tag-good {
+	color: #ffdc89;
+}
+
+.tag-poor {
+	color: #ffbe82;
+}
+
+.scrap-final-price {
+	margin-top: 14px;
+	border-radius: 12px;
+	border: 1px solid rgba(255, 196, 84, 0.45);
+	background: rgba(255, 196, 84, 0.1);
+	padding: 12px;
+}
+
+.scrap-final-price span {
+	display: block;
+	font-size: 0.84rem;
+	color: #d5b576;
+}
+
+.scrap-final-price strong {
+	font-size: 1.3rem;
+}
+
+.scrap-fluctuation-note {
+	margin: 12px 0 0;
+	padding: 10px 12px;
+	border-radius: 10px;
+	border: 1px solid rgba(255, 196, 84, 0.45);
+	background: rgba(255, 196, 84, 0.12);
+	color: #ffe1a7;
+	font-size: 0.9rem;
+	font-weight: 600;
+}
+
+@media (max-width: 640px) {
+	.scrap-card {
+		padding: 18px;
+	}
+
+	.scrap-btn {
+		width: 100%;
+	}
+}

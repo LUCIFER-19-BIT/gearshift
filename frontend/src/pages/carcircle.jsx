@@ -1,10 +1,84 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { API_ENDPOINTS, BACKEND_BASE_URL } from "../utils/apiConfig";
 
-const API_BASE_URL = "http://localhost:8001/api/carcircle";
 const MAX_IMAGE_COUNT = 10;
 const MAX_SINGLE_IMAGE_BYTES = 4 * 1024 * 1024;
 const MAX_TOTAL_IMAGE_BYTES = 12 * 1024 * 1024;
+
+const CARCIRCLE_IMAGE_LOOKUP = [
+  {
+    patterns: ["nexon ev", "nexonev"],
+    files: {
+      2016: "nexon ev 2016.webp",
+      2017: "nexon ev 2017.webp",
+      2019: "nexon ev 2019.jpg",
+    },
+  },
+  {
+    patterns: ["tata curve", "curvv", "curve"],
+    files: {
+      2016: "curve 2016.webp",
+      2017: "tata curve 2017.webp",
+      2023: "curve 2023.webp",
+    },
+  },
+  {
+    patterns: ["harrier"],
+    files: {
+      2018: "harrier 2018.webp",
+      2019: "harrier 2019.webp",
+      2020: "harrier 2020.webp",
+    },
+  },
+  {
+    patterns: ["safari"],
+    files: {
+      2019: "safari 2019.jpg",
+      2020: "safari 2020.webp",
+    },
+  },
+  {
+    patterns: ["punch"],
+    files: {
+      2017: "punch 2017.webp",
+      2018: "punch 2018.webp",
+      2019: "punch 2019.webp",
+    },
+  },
+  {
+    patterns: ["tiago"],
+    files: {
+      2020: "tiago 2020.webp",
+      2021: "tiago 2021.webp",
+      2022: "tata tiago 2022.webp",
+    },
+  },
+  {
+    patterns: ["tigor"],
+    files: {
+      2021: "tigor 2021.webp",
+      2022: "tigor 2022.webp",
+      2023: "tigor 2023.webp",
+    },
+  },
+  {
+    patterns: ["altroz", "altroze"],
+    files: {
+      2016: "altroze 2016.webp",
+      2021: "altroze 2021.webp",
+      2023: "altroze 2023.jpg",
+    },
+  },
+  {
+    patterns: ["nexon"],
+    files: {
+      2016: "nexon 2016.webp",
+      2017: "nexon 2017.webp",
+      2018: "nexon 2018.webp",
+    },
+  },
+];
 
 const INITIAL_FORM_DATA = {
   sellerName: "",
@@ -38,7 +112,7 @@ const parseApiResponse = async (response) => {
   const responseText = await response.text();
 
   if (responseText.trim().startsWith("<!DOCTYPE") || responseText.trim().startsWith("<html")) {
-    throw new Error("API returned HTML instead of JSON. Make sure backend is running on http://localhost:8001.");
+    throw new Error(`API returned HTML instead of JSON. Make sure backend is running on ${BACKEND_BASE_URL}.`);
   }
 
   if (!responseText.trim()) {
@@ -79,6 +153,85 @@ const validateSelectedImages = (files) => {
   }
 
   return null;
+};
+
+const isPlaceholderImageUrl = (url) => /placehold\.co/i.test(String(url || ""));
+
+const parseListingYear = (listing) => {
+  const source = listing?.overview?.manufacturingYear || listing?.overview?.registrationYear || "";
+  const yearMatch = String(source).match(/\d{4}/);
+  return yearMatch ? Number(yearMatch[0]) : null;
+};
+
+const normalizeCarName = (carName) => String(carName || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
+const pickClosestImageFile = (files, year) => {
+  const availableYears = Object.keys(files).map(Number).sort((left, right) => left - right);
+
+  if (availableYears.length === 0) {
+    return null;
+  }
+
+  if (year && files[year]) {
+    return files[year];
+  }
+
+  if (!year) {
+    return files[availableYears[availableYears.length - 1]];
+  }
+
+  const closestYear = availableYears.reduce((closest, candidate) => {
+    const currentDistance = Math.abs(candidate - year);
+    const closestDistance = Math.abs(closest - year);
+
+    if (currentDistance < closestDistance) {
+      return candidate;
+    }
+
+    if (currentDistance === closestDistance && candidate > closest) {
+      return candidate;
+    }
+
+    return closest;
+  }, availableYears[0]);
+
+  return files[closestYear] || null;
+};
+
+const resolveLocalCarCircleImage = (listing) => {
+  const normalizedName = normalizeCarName(listing?.carName);
+
+  if (!normalizedName) {
+    return null;
+  }
+
+  const listingYear = parseListingYear(listing);
+  const matchedEntry = CARCIRCLE_IMAGE_LOOKUP.find((entry) =>
+    entry.patterns.some((pattern) => normalizedName.includes(pattern))
+  );
+
+  if (!matchedEntry) {
+    return null;
+  }
+
+  const imageFile = pickClosestImageFile(matchedEntry.files, listingYear);
+  return imageFile ? `/carcircle/${encodeURIComponent(imageFile)}` : null;
+};
+
+const getDisplayImageUrls = (listing) => {
+  const uploadedUrls = Array.isArray(listing?.imageUrls) ? listing.imageUrls.filter(Boolean) : [];
+  const nonPlaceholderUrls = uploadedUrls.filter((url) => !isPlaceholderImageUrl(url));
+
+  if (nonPlaceholderUrls.length > 0) {
+    return nonPlaceholderUrls;
+  }
+
+  const localImage = resolveLocalCarCircleImage(listing);
+  if (localImage) {
+    return [localImage];
+  }
+
+  return uploadedUrls.length > 0 ? uploadedUrls : ["https://placehold.co/600x350?text=Second+Hand+Car"];
 };
 
 const createOverview = ({
@@ -143,7 +296,7 @@ const CarCircle = () => {
 
       try {
         setIsFetching(true);
-        const response = await fetch(API_BASE_URL, {
+        const response = await fetch(API_ENDPOINTS.carCircle, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -258,7 +411,7 @@ const CarCircle = () => {
       }
 
       const response = await fetch(
-        existingListing ? `${API_BASE_URL}/${existingListing._id}` : API_BASE_URL,
+        existingListing ? `${API_ENDPOINTS.carCircle}/${existingListing._id}` : API_ENDPOINTS.carCircle,
         {
           method: existingListing ? "PUT" : "POST",
           headers: {
@@ -339,7 +492,7 @@ const CarCircle = () => {
     try {
       setIsDeleting(true);
 
-      const response = await fetch(`${API_BASE_URL}/${selectedListing._id}`, {
+      const response = await fetch(`${API_ENDPOINTS.carCircle}/${selectedListing._id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -390,10 +543,12 @@ const CarCircle = () => {
       return;
     }
 
+    const displayImages = getDisplayImageUrls(selectedListing);
+
     setCurrentPhotoIndex(
       (previous) =>
-        (previous - 1 + selectedListing.imageUrls.length) %
-        selectedListing.imageUrls.length
+        (previous - 1 + displayImages.length) %
+        displayImages.length
     );
   };
 
@@ -402,17 +557,17 @@ const CarCircle = () => {
       return;
     }
 
+    const displayImages = getDisplayImageUrls(selectedListing);
+
     setCurrentPhotoIndex(
-      (previous) => (previous + 1) % selectedListing.imageUrls.length
+      (previous) => (previous + 1) % displayImages.length
     );
   };
 
   const getListingState = (listing) => listing.overview?.state || "Not Available";
 
   const getListingYear = (listing) => {
-    const source = listing.overview?.manufacturingYear || listing.overview?.registrationYear || "";
-    const yearMatch = String(source).match(/\d{4}/);
-    return yearMatch ? Number(yearMatch[0]) : null;
+    return parseListingYear(listing);
   };
 
   const stateOptions = useMemo(() => {
@@ -698,127 +853,135 @@ const CarCircle = () => {
         ) : filteredListings.length === 0 ? (
           <p className="carcircle-empty">No cars listed yet. Add the first listing.</p>
         ) : (
-          filteredListings.map((listing) => (
-            <article className="carcircle-card" key={listing._id}>
-              <img
-                src={listing.imageUrls?.[0]}
-                alt={listing.carName}
-                className="carcircle-image"
-                onError={(event) => {
-                  event.currentTarget.src = "https://placehold.co/600x350?text=Second+Hand+Car";
-                }}
-              />
-              <div className="carcircle-card-content">
-                <h2>{listing.carName}</h2>
-                <p className="carcircle-price">₹{Number(listing.price).toLocaleString()}</p>
-                <p>{Number(listing.kilometers).toLocaleString()} km • {listing.city}</p>
-                <p>Year: {getListingYear(listing) || "N/A"} • State: {getListingState(listing)}</p>
-                <p>{listing.description}</p>
-                <p>{listing.imageUrls?.length || 0} photos</p>
-                <button className="btn-outline" onClick={() => openExploreModal(listing)}>
-                  Explore
-                </button>
-              </div>
-            </article>
-          ))
+          filteredListings.map((listing) => {
+            const displayImageUrls = getDisplayImageUrls(listing);
+
+            return (
+              <article className="carcircle-card" key={listing._id}>
+                <img
+                  src={displayImageUrls[0]}
+                  alt={listing.carName}
+                  className="carcircle-image"
+                  onError={(event) => {
+                    event.currentTarget.src = "https://placehold.co/600x350?text=Second+Hand+Car";
+                  }}
+                />
+                <div className="carcircle-card-content">
+                  <h2>{listing.carName}</h2>
+                  <p className="carcircle-price">₹{Number(listing.price).toLocaleString()}</p>
+                  <p>{Number(listing.kilometers).toLocaleString()} km • {listing.city}</p>
+                  <p>Year: {getListingYear(listing) || "N/A"} • State: {getListingState(listing)}</p>
+                  <p>{listing.description}</p>
+                  <p>{displayImageUrls.length} photos</p>
+                  <button className="btn-outline" onClick={() => openExploreModal(listing)}>
+                    Explore
+                  </button>
+                </div>
+              </article>
+            );
+          })
         )}
       </div>
 
-      {selectedListing ? (
-        <div className="carcircle-modal-overlay" onClick={closeExploreModal}>
-          <section className="carcircle-modal" onClick={(event) => event.stopPropagation()}>
-            <button
-              type="button"
-              className="carcircle-modal-close"
-              onClick={closeExploreModal}
-              aria-label="Close details"
-            >
-              ×
-            </button>
+      {selectedListing ? (() => {
+        const selectedListingImages = getDisplayImageUrls(selectedListing);
 
-            <div className="carcircle-modal-main-image-wrap">
-              <button type="button" className="carcircle-modal-nav" onClick={handlePrevPhoto}>
-                ‹
-              </button>
-              <img
-                src={selectedListing.imageUrls[currentPhotoIndex]}
-                alt={`${selectedListing.carName} ${currentPhotoIndex + 1}`}
-                className="carcircle-modal-main-image"
-              />
-              <button type="button" className="carcircle-modal-nav" onClick={handleNextPhoto}>
-                ›
-              </button>
-            </div>
-
-            <div className="carcircle-modal-content">
-              <div className="carcircle-details-header">
-                <h2>{selectedListing.carName}</h2>
-                <p className="carcircle-price">₹{Number(selectedListing.price).toLocaleString()}</p>
-              </div>
-              <p>{Number(selectedListing.kilometers).toLocaleString()} km • {selectedListing.city}</p>
-              <p>{selectedListing.description}</p>
-              <p>Seller: {selectedListing.sellerName}</p>
-
-              <section className="carcircle-overview-section">
-                <h3>Car Overview</h3>
-                <div className="carcircle-overview-grid">
-                  {overviewRows.map((item) => (
-                    <div key={item.label} className="carcircle-overview-cell">
-                      <p className="carcircle-overview-label">{item.label}</p>
-                      <p className="carcircle-overview-value">{item.value}</p>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
+        return (
+          <div className="carcircle-modal-overlay" onClick={closeExploreModal}>
+            <section className="carcircle-modal" onClick={(event) => event.stopPropagation()}>
               <button
                 type="button"
-                className="btn-outline"
-                onClick={handleContactOwner}
+                className="carcircle-modal-close"
+                onClick={closeExploreModal}
+                aria-label="Close details"
               >
-                Contact Owner
+                ×
               </button>
-              {selectedListing.userId === currentUserId ? (
-                <>
-                  <button type="button" className="btn-primary" onClick={handleEditDetails}>
-                    Edit Details
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-outline"
-                    onClick={handleDeleteListing}
-                    disabled={isDeleting}
-                  >
-                    {isDeleting ? "Deleting..." : "Delete Listing"}
-                  </button>
-                </>
-              ) : null}
-            </div>
 
-            {showContactPopup ? (
-              <div
-                className="carcircle-contact-popup-overlay"
-                onClick={() => setShowContactPopup(false)}
-              >
-                <div
-                  className="carcircle-contact-popup"
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  <h4>Owner Contact</h4>
-                  <p>{selectedListing.contactNumber || "Not available"}</p>
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    onClick={() => setShowContactPopup(false)}
-                  >
-                    Close
-                  </button>
-                </div>
+              <div className="carcircle-modal-main-image-wrap">
+                <button type="button" className="carcircle-modal-nav" onClick={handlePrevPhoto}>
+                  ‹
+                </button>
+                <img
+                  src={selectedListingImages[currentPhotoIndex]}
+                  alt={`${selectedListing.carName} ${currentPhotoIndex + 1}`}
+                  className="carcircle-modal-main-image"
+                />
+                <button type="button" className="carcircle-modal-nav" onClick={handleNextPhoto}>
+                  ›
+                </button>
               </div>
-            ) : null}
-          </section>
-        </div>
-      ) : null}
+
+              <div className="carcircle-modal-content">
+                <div className="carcircle-details-header">
+                  <h2>{selectedListing.carName}</h2>
+                  <p className="carcircle-price">₹{Number(selectedListing.price).toLocaleString()}</p>
+                </div>
+                <p>{Number(selectedListing.kilometers).toLocaleString()} km • {selectedListing.city}</p>
+                <p>{selectedListing.description}</p>
+                <p>Seller: {selectedListing.sellerName}</p>
+
+                <section className="carcircle-overview-section">
+                  <h3>Car Overview</h3>
+                  <div className="carcircle-overview-grid">
+                    {overviewRows.map((item) => (
+                      <div key={item.label} className="carcircle-overview-cell">
+                        <p className="carcircle-overview-label">{item.label}</p>
+                        <p className="carcircle-overview-value">{item.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                <button
+                  type="button"
+                  className="btn-outline"
+                  onClick={handleContactOwner}
+                >
+                  Contact Owner
+                </button>
+                {selectedListing.userId === currentUserId ? (
+                  <>
+                    <button type="button" className="btn-primary" onClick={handleEditDetails}>
+                      Edit Details
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-outline"
+                      onClick={handleDeleteListing}
+                      disabled={isDeleting}
+                    >
+                      {isDeleting ? "Deleting..." : "Delete Listing"}
+                    </button>
+                  </>
+                ) : null}
+              </div>
+
+              {showContactPopup ? (
+                <div
+                  className="carcircle-contact-popup-overlay"
+                  onClick={() => setShowContactPopup(false)}
+                >
+                  <div
+                    className="carcircle-contact-popup"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    <h4>Owner Contact</h4>
+                    <p>{selectedListing.contactNumber || "Not available"}</p>
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      onClick={() => setShowContactPopup(false)}
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </section>
+          </div>
+        );
+      })() : null}
 
       <button
         type="button"

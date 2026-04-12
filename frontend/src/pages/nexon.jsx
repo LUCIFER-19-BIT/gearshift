@@ -1,10 +1,10 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import NexonImg from '../nexonev.webp';
-import nexonDasImg from '../nexondas.avif';
-import nexonAlloyImg from '../nexonalloy.webp';
-import nexonVid from '../nexonvid.mp4';
-import nexonVid2 from '../nexonvid2.mp4';
+import NexonImg from '../assets/vehicles/ev/nexonev.webp';
+import nexonDasImg from '../assets/vehicles/nexon/nexondas.avif';
+import nexonAlloyImg from '../assets/vehicles/nexon/nexonalloy.webp';
+import nexonVid from '../assets/vehicles/nexon/nexonvid.mp4';
+import nexonVid2 from '../assets/vehicles/nexon/nexonvid2.mp4';
 import ChargingStations from '../components/ChargingStations';
 import '../curve.css';
 

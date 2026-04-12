@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { API_ENDPOINTS } from "./apiConfig";
 
 const useAuthStore = create(
   persist(
@@ -26,7 +27,7 @@ const useAuthStore = create(
         const token = localStorage.getItem("token");
         if (!token) return;
         try {
-          const response = await fetch("http://localhost:8001/api/bookings", {
+          const response = await fetch(API_ENDPOINTS.bookings, {
             headers: {
               Authorization: `Bearer ${token}`,
             },
@@ -50,7 +51,7 @@ const useAuthStore = create(
         const token = localStorage.getItem("token");
         if (!token) return;
         try {
-          const response = await fetch("http://localhost:8001/api/testdrives", {
+          const response = await fetch(API_ENDPOINTS.testDrives, {
             headers: {
               Authorization: `Bearer ${token}`,
             },

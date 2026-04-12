@@ -1,4 +1,4 @@
-const BACKEND_BASE_URL = 'http://localhost:8001';
+import { API_ENDPOINTS } from "./apiConfig";
 
 export const DEFAULT_LOCATION = { lat: 20.5937, lng: 78.9629 };
 
@@ -33,7 +33,7 @@ export const fetchNearbyTataDealerships = async (location = DEFAULT_LOCATION, si
         lng: String(location.lng),
     });
 
-    const response = await fetch(`${BACKEND_BASE_URL}/api/dealerships/nearby?${params.toString()}`, {
+    const response = await fetch(`${API_ENDPOINTS.nearbyDealerships}?${params.toString()}`, {
         signal,
         headers: {
             Accept: 'application/json',

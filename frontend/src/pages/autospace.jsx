@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import useAuthStore from "../utils/authStore";
+import { CAR_DISPLAY_NAMES } from "../utils/carData";
+import { API_ENDPOINTS } from "../utils/apiConfig";
+import { getDealershipName } from "../utils/dealershipHelpers";
 import "../styles/autospace.css";
-
-const ORDERS_API_BASE_URL = "http://localhost:8001/api/cart";
 
 const AutoSpace = () => {
     const navigate = useNavigate();
@@ -12,17 +13,15 @@ const AutoSpace = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [activeTab, setActiveTab] = useState("overview");
+    const [actionLoading, setActionLoading] = useState({
+        bookingId: "",
+        testDriveId: "",
+        orderId: "",
+    });
     const token = localStorage.getItem("token");
 
-    const carDisplayMap = {
-        harrier: "Harrier",
-        nexon: "Nexon",
-        safari: "Safari",
-        curve: "Curvv",
-        altroz: "Altroz",
-        tiago: "Tiago",
-        punch: "Punch",
-        tigor: "Tigor",
+    const authHeaders = {
+        Authorization: `Bearer ${token}`,
     };
 
     useEffect(() => {
@@ -40,7 +39,7 @@ const AutoSpace = () => {
                 await fetchTestDrives();
 
                 // Fetch orders
-                const response = await fetch(ORDERS_API_BASE_URL, {
+                const response = await fetch(API_ENDPOINTS.cart, {
                     headers: {
                         Authorization: `Bearer ${token}`,
                     },
@@ -50,7 +49,6 @@ const AutoSpace = () => {
                     const data = await response.json();
                     setOrders(data.orders || []);
                 } else {
-                    console.log("No orders found or unable to fetch");
                     setOrders([]);
                 }
             } catch (err) {
@@ -64,18 +62,6 @@ const AutoSpace = () => {
         fetchUserData();
     }, [user, token, navigate, fetchBookings, fetchTestDrives]);
 
-    const getDealershipName = (dealership) => {
-        if (!dealership) return "";
-        if (typeof dealership === "string") {
-            try {
-                return JSON.parse(dealership).name;
-            } catch (error) {
-                return dealership;
-            }
-        }
-        return dealership.name || "";
-    };
-
     const getTotalStats = () => {
         return {
             bookedCars: bookings?.length || 0,
@@ -86,6 +72,73 @@ const AutoSpace = () => {
     };
 
     const stats = getTotalStats();
+
+    const cancelBooking = async (bookingId) => {
+        setError("");
+        setActionLoading((prev) => ({ ...prev, bookingId }));
+        try {
+            const response = await fetch(`${API_ENDPOINTS.bookings}/${bookingId}`, {
+                method: "DELETE",
+                headers: authHeaders,
+            });
+
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                throw new Error(data.message || "Failed to cancel booking");
+            }
+
+            await fetchBookings();
+        } catch (err) {
+            setError(err.message || "Failed to cancel booking");
+        } finally {
+            setActionLoading((prev) => ({ ...prev, bookingId: "" }));
+        }
+    };
+
+    const cancelTestDrive = async (testDriveId) => {
+        setError("");
+        setActionLoading((prev) => ({ ...prev, testDriveId }));
+        try {
+            const response = await fetch(`${API_ENDPOINTS.testDrives}/${testDriveId}`, {
+                method: "DELETE",
+                headers: authHeaders,
+            });
+
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                throw new Error(data.message || "Failed to cancel test drive");
+            }
+
+            await fetchTestDrives();
+        } catch (err) {
+            setError(err.message || "Failed to cancel test drive");
+        } finally {
+            setActionLoading((prev) => ({ ...prev, testDriveId: "" }));
+        }
+    };
+
+    const cancelOrder = async (orderId) => {
+        setError("");
+        setActionLoading((prev) => ({ ...prev, orderId }));
+        try {
+            const response = await fetch(`${API_ENDPOINTS.cart}/${orderId}/cancel`, {
+                method: "PATCH",
+                headers: authHeaders,
+            });
+
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                throw new Error(data.error || data.message || "Failed to cancel order");
+            }
+
+            setOrders((prev) => prev.filter((order) => order._id !== orderId));
+        } catch (err) {
+            setError(err.message || "Failed to cancel order");
+        } finally {
+            setActionLoading((prev) => ({ ...prev, orderId: "" }));
+        }
+    };
 
     if (loading) {
         return (
@@ -296,6 +349,16 @@ const AutoSpace = () => {
                                             <span className="value">{new Date(booking.createdAt).toLocaleDateString()}</span>
                                         </div>
                                     </div>
+                                    <div className="card-footer">
+                                        <button
+                                            type="button"
+                                            className="btn-danger"
+                                            disabled={actionLoading.bookingId === booking._id}
+                                            onClick={() => cancelBooking(booking._id)}
+                                        >
+                                            {actionLoading.bookingId === booking._id ? "Cancelling..." : "Cancel Booking"}
+                                        </button>
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -336,7 +399,7 @@ const AutoSpace = () => {
                                         </div>
                                         <div className="detail-row">
                                             <span className="label">Car Model:</span>
-                                            <span className="value">{carDisplayMap[td.model] || td.model}</span>
+                                            <span className="value">{CAR_DISPLAY_NAMES[td.model] || td.model}</span>
                                         </div>
                                         <div className="detail-row">
                                             <span className="label">Variant:</span>
@@ -346,6 +409,16 @@ const AutoSpace = () => {
                                             <span className="label">Location (Pincode):</span>
                                             <span className="value">{td.pincode}</span>
                                         </div>
+                                    </div>
+                                    <div className="card-footer">
+                                        <button
+                                            type="button"
+                                            className="btn-danger"
+                                            disabled={actionLoading.testDriveId === td._id}
+                                            onClick={() => cancelTestDrive(td._id)}
+                                        >
+                                            {actionLoading.testDriveId === td._id ? "Cancelling..." : "Cancel Test Drive"}
+                                        </button>
                                     </div>
                                 </div>
                             ))}
@@ -397,8 +470,20 @@ const AutoSpace = () => {
                                         </div>
                                         <div className="detail-row">
                                             <span className="label">Status:</span>
-                                            <span className="status-badge processing">Processing</span>
+                                            <span className="status-badge processing">
+                                                {order.orderStatus || "Pending"}
+                                            </span>
                                         </div>
+                                    </div>
+                                    <div className="card-footer">
+                                        <button
+                                            type="button"
+                                            className="btn-danger"
+                                            disabled={actionLoading.orderId === order._id}
+                                            onClick={() => cancelOrder(order._id)}
+                                        >
+                                            {actionLoading.orderId === order._id ? "Cancelling..." : "Cancel Order"}
+                                        </button>
                                     </div>
                                 </div>
                             ))}

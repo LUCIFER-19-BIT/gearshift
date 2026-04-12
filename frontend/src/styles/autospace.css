@@ -471,6 +471,28 @@
   border-color: var(--accent-color);
 }
 
+.btn-danger {
+  padding: 10px 20px;
+  border: 1px solid rgba(255, 87, 87, 0.5);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+  background: rgba(255, 87, 87, 0.12);
+  color: #ffb4b4;
+  transition: all 0.3s ease;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: rgba(255, 87, 87, 0.22);
+  border-color: #ff8a8a;
+}
+
+.btn-danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* Empty Section */
 .empty-section {
   text-align: center;

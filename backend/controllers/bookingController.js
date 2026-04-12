@@ -1,8 +1,8 @@
 const Booking = require("../models/Booking");
+const { ensureAuthenticatedUser } = require("../library/authHelper");
 
 const createBooking = async (req, res) => {
   try {
-    console.log("Received booking data:", req.body);
     const {
       name,
       email,
@@ -14,7 +14,8 @@ const createBooking = async (req, res) => {
       image,
       dealership,
     } = req.body;
-    const userId = req.user.id;
+    const userId = ensureAuthenticatedUser(req, res);
+    if (!userId) return;
 
     // Create booking
     const booking = new Booking({
@@ -30,9 +31,7 @@ const createBooking = async (req, res) => {
       dealership,
     });
 
-    console.log("Saving booking...");
     const savedBooking = await booking.save();
-    console.log("Booking saved:", savedBooking);
 
     res
       .status(201)
@@ -45,7 +44,8 @@ const createBooking = async (req, res) => {
 
 const getBookings = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = ensureAuthenticatedUser(req, res);
+    if (!userId) return;
     const bookings = await Booking.find({ userId });
     res.json(bookings);
   } catch (error) {
@@ -54,4 +54,23 @@ const getBookings = async (req, res) => {
   }
 };
 
-module.exports = { createBooking, getBookings };
+const cancelBooking = async (req, res) => {
+  try {
+    const userId = ensureAuthenticatedUser(req, res);
+    if (!userId) return;
+    const { id } = req.params;
+
+    const deletedBooking = await Booking.findOneAndDelete({ _id: id, userId });
+
+    if (!deletedBooking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    return res.json({ message: "Booking cancelled successfully" });
+  } catch (error) {
+    console.error("Error cancelling booking:", error);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+module.exports = { createBooking, getBookings, cancelBooking };

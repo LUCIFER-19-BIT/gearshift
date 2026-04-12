@@ -1,10 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useAuthStore from "../utils/authStore";
+import { API_ENDPOINTS, BACKEND_BASE_URL } from "../utils/apiConfig";
 import "../styles/cart.css";
-
-const ORDER_API_BASE_URL = "http://localhost:8001/api/cart";
-const CART_ITEMS_API_BASE_URL = "http://localhost:8001/api/cart/items";
 
 const parseApiResponse = async (response) => {
   const contentType = response.headers.get("content-type") || "";
@@ -20,7 +18,7 @@ const parseApiResponse = async (response) => {
     responseText.trim().startsWith("<html")
   ) {
     throw new Error(
-      "API returned HTML instead of JSON. Make sure backend is running on http://localhost:8001."
+      `API returned HTML instead of JSON. Make sure backend is running on ${BACKEND_BASE_URL}.`
     );
   }
 
@@ -81,7 +79,7 @@ export default function Cart() {
     const fetchCartItems = async () => {
       setItemsLoading(true);
       try {
-        const response = await fetch(CART_ITEMS_API_BASE_URL, {
+        const response = await fetch(API_ENDPOINTS.cartItems, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -108,7 +106,7 @@ export default function Cart() {
 
   const removeCartItem = async (itemId) => {
     try {
-      const response = await fetch(`${CART_ITEMS_API_BASE_URL}/${itemId}`, {
+      const response = await fetch(`${API_ENDPOINTS.cartItems}/${itemId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -196,7 +194,7 @@ export default function Cart() {
         homeAddress: formData.homeAddress,
       };
 
-      const response = await fetch(ORDER_API_BASE_URL, {
+      const response = await fetch(API_ENDPOINTS.cart, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

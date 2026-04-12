@@ -1,10 +1,10 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import PunchImg from '../punchev.webp';
-import punchBannerImg from '../punchbanner.avif';
-import punchContentImg from '../punchcon.avif';
-import punchVideo from '../punchvid.mp4';
-import punchVideo2 from '../punchvid2.mp4';
+import PunchImg from '../assets/vehicles/ev/punchev.webp';
+import punchBannerImg from '../assets/vehicles/punch/punchbanner.avif';
+import punchContentImg from '../assets/vehicles/punch/punchcon.avif';
+import punchVideo from '../assets/vehicles/punch/punchvid.mp4';
+import punchVideo2 from '../assets/vehicles/punch/punchvid2.mp4';
 import ChargingStations from '../components/ChargingStations';
 import '../curve.css';
 

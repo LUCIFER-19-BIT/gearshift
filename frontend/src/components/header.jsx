@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import useAuthStore from '../utils/authStore';
+import logoImage from '../assets/gearshift-logo.png';
 
 export default function Header() {
   const { user, logout } = useAuthStore();
@@ -8,21 +9,19 @@ export default function Header() {
 
   return (
     <header className="navbar">
+      <div className="navbar-left">
+        <Link to="/about" className="btn-outline about-btn" onClick={() => setIsMenuOpen(false)}>
+          About Us
+        </Link>
+      </div>
+
       <div className="logo">
         <Link to="/" style={{ color: "inherit", textDecoration: "none" }}>
-          TATA
-          <span className="rise">Desh Ka Loha</span>
+          <img src={logoImage} alt="GearShift Logo" className="logo-img" />
         </Link>
       </div>
 
       <div className="user-menu">
-        <Link
-          to={user ? "/bookings" : "/login"}
-          className="user-icon"
-          aria-label="User account"
-        >
-          &#128100;
-        </Link>
         <button
           type="button"
           className="burger-btn"
@@ -49,7 +48,6 @@ export default function Header() {
         ) : null}
         {user ? (
           <>
-            <span>Welcome, {user.username}</span>
             <button onClick={logout} className="btn-outline">LOGOUT</button>
           </>
         ) : (

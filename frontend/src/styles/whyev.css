@@ -11,8 +11,7 @@
 .whyev-hero,
 .whyev-map-card,
 .whyev-calculator,
-.whyev-chargers,
-.whyev-why-better {
+.whyev-chargers {
   width: min(1100px, 100%);
   margin: 0 auto;
 }
@@ -37,8 +36,7 @@
 
 .whyev-map-card,
 .whyev-calculator,
-.whyev-chargers,
-.whyev-why-better {
+.whyev-chargers {
   background: rgba(10, 19, 24, 0.86);
   border: 1px solid rgba(79, 180, 255, 0.24);
   border-radius: 16px;
@@ -181,18 +179,6 @@
 
 .whyev-results .savings {
   color: #35e0a7;
-}
-
-.whyev-why-better h2 {
-  color: #49c5ff;
-  margin: 0 0 12px;
-}
-
-.whyev-why-better ul {
-  margin: 0;
-  padding-left: 20px;
-  color: #dce6ea;
-  line-height: 1.6;
 }
 
 .whyev-marker {

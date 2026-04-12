@@ -21,7 +21,6 @@ const Harrier = () => {
           </p>
           <div>
             <button className="curve-button" onClick={() => navigate('/bookings', { state: { image: HarrierImg } })}>Book Now</button>
-            {/* Removed Digital Showroom button as per request */}
           </div>
         </div>
         <div>

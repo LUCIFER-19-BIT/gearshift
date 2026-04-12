@@ -9,6 +9,7 @@ import {
   calculateDistance,
   fetchNearbyTataDealerships,
 } from "../utils/dealershipApi";
+import { BACKEND_BASE_URL } from "../utils/apiConfig";
 
 const TILE_LAYER_ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
@@ -16,7 +17,6 @@ const TILE_LAYER_URL =
   "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
 const OSRM_ROUTE_ENDPOINT = "https://router.project-osrm.org/route/v1/driving";
 const ENDPOINT_EXCLUSION_KM = 3;
-const BACKEND_BASE_URL = "http://localhost:8001";
 const MID_ROUTE_MIN_PROGRESS = 0.1;
 const MID_ROUTE_MAX_PROGRESS = 0.9;
 const ROUTE_CORRIDOR_KM_STRICT = 6;
@@ -1004,17 +1004,6 @@ export default function WhyEV() {
       </section>
 
       <EvStatsGraphs />
-
-      <section className="whyev-why-better">
-        <h2>Why EV is Better</h2>
-        <ul>
-          <li>Lower running cost for daily commuting, especially in city stop-go traffic.</li>
-          <li>Zero tailpipe emissions, improving urban air quality near homes and offices.</li>
-          <li>Lower maintenance needs because EVs have fewer moving parts than petrol cars.</li>
-          <li>Smooth and instant torque delivery, making everyday driving effortless.</li>
-          <li>Future-ready ownership as charging network and EV support keep expanding.</li>
-        </ul>
-      </section>
     </main>
   );
 }

@@ -1,14 +1,11 @@
 const Cart = require("../models/Cart");
-
-const getAuthenticatedUserId = (req) => req.user?.id || req.user?._id || null;
+const PartOrder = require("../models/PartOrder");
+const { ensureAuthenticatedUser } = require("../library/authHelper");
 
 exports.addCartItem = async (req, res) => {
   try {
-    const userId = getAuthenticatedUserId(req);
-
-    if (!userId) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
+    const userId = ensureAuthenticatedUser(req, res);
+    if (!userId) return;
 
     const {
       productId,
@@ -69,11 +66,8 @@ exports.addCartItem = async (req, res) => {
 
 exports.getCartItems = async (req, res) => {
   try {
-    const userId = getAuthenticatedUserId(req);
-
-    if (!userId) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
+    const userId = ensureAuthenticatedUser(req, res);
+    if (!userId) return;
 
     const items = await Cart.find({ userId, recordType: "cart" }).sort({ createdAt: -1 });
     return res.status(200).json({ items });
@@ -85,11 +79,8 @@ exports.getCartItems = async (req, res) => {
 
 exports.removeCartItem = async (req, res) => {
   try {
-    const userId = getAuthenticatedUserId(req);
-
-    if (!userId) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
+    const userId = ensureAuthenticatedUser(req, res);
+    if (!userId) return;
 
     const { id } = req.params;
 
@@ -124,11 +115,8 @@ exports.createOrder = async (req, res) => {
       homeAddress,
     } = req.body;
 
-    const userId = getAuthenticatedUserId(req);
-
-    if (!userId) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
+    const userId = ensureAuthenticatedUser(req, res);
+    if (!userId) return;
 
     // Validate required fields
     if (
@@ -142,8 +130,8 @@ exports.createOrder = async (req, res) => {
       return res.status(400).json({ error: "All fields are required" });
     }
 
-    // Create new cart/order
-    const order = new Cart({
+    // Create new order in dedicated parts collection
+    const order = new PartOrder({
       userId,
       productId,
       productName,
@@ -159,7 +147,6 @@ exports.createOrder = async (req, res) => {
       homeAddress,
       paymentMethod: "COD",
       orderStatus: "Pending",
-      recordType: "order",
     });
 
     const savedOrder = await order.save();
@@ -177,16 +164,10 @@ exports.createOrder = async (req, res) => {
 // Get all orders for a user
 exports.getOrders = async (req, res) => {
   try {
-    const userId = getAuthenticatedUserId(req);
+    const userId = ensureAuthenticatedUser(req, res);
+    if (!userId) return;
 
-    if (!userId) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-
-    const orders = await Cart.find({
-      userId,
-      $or: [{ recordType: "order" }, { recordType: { $exists: false } }],
-    }).sort({ createdAt: -1 });
+    const orders = await PartOrder.find({ userId }).sort({ createdAt: -1 });
 
     res.status(200).json({
       message: "Orders retrieved successfully",
@@ -202,19 +183,12 @@ exports.getOrders = async (req, res) => {
 exports.getOrderById = async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = getAuthenticatedUserId(req);
+    const userId = ensureAuthenticatedUser(req, res);
+    if (!userId) return;
 
-    if (!userId) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-
-    const order = await Cart.findById(id);
+    const order = await PartOrder.findById(id);
 
     if (!order) {
-      return res.status(404).json({ error: "Order not found" });
-    }
-
-    if (order.recordType && order.recordType !== "order") {
       return res.status(404).json({ error: "Order not found" });
     }
 
@@ -230,5 +204,26 @@ exports.getOrderById = async (req, res) => {
   } catch (error) {
     console.error("Error fetching order:", error);
     res.status(500).json({ error: "Failed to fetch order" });
+  }
+};
+
+exports.cancelOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = ensureAuthenticatedUser(req, res);
+    if (!userId) return;
+
+    const deletedOrder = await PartOrder.findOneAndDelete({ _id: id, userId });
+
+    if (!deletedOrder) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+
+    return res.status(200).json({
+      message: "Order cancelled and removed successfully",
+    });
+  } catch (error) {
+    console.error("Error cancelling order:", error);
+    return res.status(500).json({ error: "Failed to cancel order" });
   }
 };

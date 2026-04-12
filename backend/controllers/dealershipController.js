@@ -8,6 +8,7 @@ const BIGDATACLOUD_REVERSE_ENDPOINT = 'https://api.bigdatacloud.net/data/reverse
 const NOMINATIM_ENDPOINT = 'https://nominatim.openstreetmap.org/search';
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const MAX_NEARBY_RADIUS_KM = 30;
+const MAX_DEALERSHIP_RESULTS = 25;
 const cache = new Map();
 
 const deg2rad = (deg) => deg * (Math.PI / 180);
@@ -139,6 +140,21 @@ const dedupeDealerships = (dealerships = []) => {
 
 const filterDealershipsWithinRadius = (dealerships = []) => {
   return dealerships.filter((dealer) => Number.parseFloat(dealer.distance) <= MAX_NEARBY_RADIUS_KM);
+};
+
+const finalizeDealerships = (dealerships = []) => {
+  return filterDealershipsWithinRadius(dedupeDealerships(dealerships))
+    .sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance))
+    .slice(0, MAX_DEALERSHIP_RESULTS);
+};
+
+const cacheAndRespond = (res, cacheKey, source, dealerships) => {
+  cache.set(cacheKey, {
+    source,
+    dealerships,
+    expiresAt: Date.now() + CACHE_TTL_MS,
+  });
+  return res.json({ source, dealerships });
 };
 
 const buildViewbox = (location, radiusMeters) => {
@@ -309,8 +325,7 @@ const fetchTataLocatorDealerships = async (location, signal) => {
         .map((dealer) => ({
           ...dealer,
           distance: calculateDistance(location.lat, location.lng, dealer.lat, dealer.lng),
-        }))
-        .sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
+        }));
 
       results.push(...parsed);
 
@@ -322,9 +337,7 @@ const fetchTataLocatorDealerships = async (location, signal) => {
     }
   }
 
-  return filterDealershipsWithinRadius(dedupeDealerships(results))
-    .sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance))
-    .slice(0, 25);
+  return finalizeDealerships(results);
 };
 
 const fetchNominatimTataDealerships = async (location, signal) => {
@@ -373,16 +386,12 @@ const fetchNominatimTataDealerships = async (location, signal) => {
       }
 
       if (results.length >= 5) {
-        return filterDealershipsWithinRadius(dedupeDealerships(results))
-          .sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance))
-          .slice(0, 25);
+        return finalizeDealerships(results);
       }
     }
   }
 
-  return filterDealershipsWithinRadius(dedupeDealerships(results))
-    .sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance))
-    .slice(0, 25);
+  return finalizeDealerships(results);
 };
 
 const fetchOverpassTataDealerships = async (location, signal) => {
@@ -431,9 +440,9 @@ const fetchOverpassTataDealerships = async (location, signal) => {
         .filter(Boolean);
 
       if (results.length > 0) {
-        return filterDealershipsWithinRadius(dedupeDealerships(results))
+        return finalizeDealerships(results)
           .sort((a, b) => (parseFloat(b.matchScore || 0) - parseFloat(a.matchScore || 0)) || (parseFloat(a.distance) - parseFloat(b.distance)))
-          .slice(0, 25);
+          .slice(0, MAX_DEALERSHIP_RESULTS);
       }
     } catch (error) {
       // try next endpoint
@@ -464,20 +473,17 @@ exports.getNearbyDealerships = async (req, res) => {
   try {
     const tataLocatorResults = await fetchTataLocatorDealerships(location, req.signal);
     if (tataLocatorResults.length > 0) {
-      cache.set(cacheKey, { source: 'tata-locator', dealerships: tataLocatorResults, expiresAt: Date.now() + CACHE_TTL_MS });
-      return res.json({ source: 'tata-locator', dealerships: tataLocatorResults });
+      return cacheAndRespond(res, cacheKey, 'tata-locator', tataLocatorResults);
     }
 
     const nominatimResults = await fetchNominatimTataDealerships(location, req.signal);
     if (nominatimResults.length > 0) {
-      cache.set(cacheKey, { source: 'nominatim', dealerships: nominatimResults, expiresAt: Date.now() + CACHE_TTL_MS });
-      return res.json({ source: 'nominatim', dealerships: nominatimResults });
+      return cacheAndRespond(res, cacheKey, 'nominatim', nominatimResults);
     }
 
     const overpassResults = await fetchOverpassTataDealerships(location, req.signal);
     if (overpassResults.length > 0) {
-      cache.set(cacheKey, { source: 'overpass', dealerships: overpassResults, expiresAt: Date.now() + CACHE_TTL_MS });
-      return res.json({ source: 'overpass', dealerships: overpassResults });
+      return cacheAndRespond(res, cacheKey, 'overpass', overpassResults);
     }
 
     return res.status(404).json({ message: 'No Tata dealerships were found near this location.' });

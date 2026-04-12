@@ -1,10 +1,10 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import TiagoImg from '../tiagoev.webp';
-import tiagoSmartImg from '../smarttiago.avif';
-import tiagoLedImg from '../tiagoled.avif';
-import tiagoVid from '../tiagovid.mp4';
-import tiagoVid2 from '../tiagovid2.mp4';
+import TiagoImg from '../assets/vehicles/ev/tiagoev.webp';
+import tiagoSmartImg from '../assets/vehicles/tiago/smarttiago.avif';
+import tiagoLedImg from '../assets/vehicles/tiago/tiagoled.avif';
+import tiagoVid from '../assets/vehicles/tiago/tiagovid.mp4';
+import tiagoVid2 from '../assets/vehicles/tiago/tiagovid2.mp4';
 import ChargingStations from '../components/ChargingStations';
 import '../curve.css';
 

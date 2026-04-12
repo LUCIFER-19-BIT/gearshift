@@ -1,10 +1,8 @@
 import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import useAuthStore from "../utils/authStore";
+import { API_ENDPOINTS } from "../utils/apiConfig";
 import "../styles/parts.css";
-
-const CART_ITEMS_API = "http://localhost:8001/api/cart/items";
-const PARTS_AI_API = "http://localhost:8001/api/parts/ai-recommend";
 
 const PARTS_DATA = [
   // Brake System
@@ -23,9 +21,9 @@ const PARTS_DATA = [
   { id: 9, name: "Ignition Coil", category: "Ignition System", brand: "Tata", price: 1500, carModels: ["Nexon", "Harrier"], stock: 10, image: "/parts/ignition-coil.jpg" },
 
   // Cooling System
-  { id: 10, name: "Radiator Coolant 1L", category: "Cooling System", brand: "Tata", price: 400, carModels: ["Nexon", "Punch", "Tiago"], stock: 28, image: "/parts/coolant.jpg" },
+  { id: 10, name: "Radiator Coolant 1L", category: "Cooling System", brand: "Tata", price: 400, carModels: ["Nexon", "Punch", "Tiago"], stock: 28, image: "/parts/coolant.webp" },
   { id: 11, name: "Water Pump", category: "Cooling System", brand: "Tata", price: 3200, carModels: ["Harrier", "Nexon"], stock: 7, image: "/parts/water-pump.jpg" },
-  { id: 12, name: "Thermostat", category: "Cooling System", brand: "Tata", price: 1100, carModels: ["Nexon", "Harrier"], stock: 9, image: "/parts/thermostat.jpg" },
+  { id: 12, name: "Thermostat", category: "Cooling System", brand: "Tata", price: 1100, carModels: ["Nexon", "Harrier"], stock: 9, image: "/parts/thermostat.webp" },
 
   // Lighting
   { id: 13, name: "Headlight Bulb H4", category: "Lighting", brand: "Tata", price: 600, carModels: ["Nexon", "Punch", "Tiago", "Tigor"], stock: 18, image: "/parts/headlight-bulb.jpg" },
@@ -48,7 +46,7 @@ const PARTS_DATA = [
   { id: 24, name: "Wiper Blades (Pair)", category: "Electrical", brand: "Tata", price: 700, carModels: ["Nexon", "Punch", "Tiago", "Harrier"], stock: 24, image: "/parts/wiper-blades.jpg" },
 
   // Interior & Exterior
-  { id: 25, name: "Door Handle Kit (Front)", category: "Interior & Exterior", brand: "Tata", price: 1200, carModels: ["Nexon", "Punch", "Tiago"], stock: 11, image: "/parts/door-handle.jpg" },
+  { id: 25, name: "Door Handle Kit (Front)", category: "Interior & Exterior", brand: "Tata", price: 1200, carModels: ["Nexon", "Punch", "Tiago"], stock: 11, image: "/parts/door-handle.webp" },
   { id: 26, name: "Side View Mirror Left", category: "Interior & Exterior", brand: "Tata", price: 1800, carModels: ["Nexon", "Harrier", "Punch"], stock: 9, image: "/parts/side-mirror.jpg" },
   { id: 27, name: "Dashboard Trim Kit", category: "Interior & Exterior", brand: "Tata", price: 2200, carModels: ["Harrier"], stock: 4, image: "/parts/dashboard-trim.jpg" },
 ];
@@ -130,7 +128,7 @@ export default function Parts() {
     setAiLoading(true);
 
     try {
-      const response = await fetch(PARTS_AI_API, {
+      const response = await fetch(API_ENDPOINTS.partsAiRecommend, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -177,7 +175,7 @@ export default function Parts() {
     }
 
     try {
-      const response = await fetch(CART_ITEMS_API, {
+      const response = await fetch(API_ENDPOINTS.cartItems, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
