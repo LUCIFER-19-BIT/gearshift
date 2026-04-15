@@ -1,4 +1,7 @@
-export const BACKEND_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:8001";
+const rawBackendUrl = process.env.REACT_APP_API_URL || process.env.REACT_APP_BACKEND_URL || "";
+
+// Remove trailing slashes so endpoint concatenation remains stable.
+export const BACKEND_BASE_URL = rawBackendUrl.replace(/\/+$/, "");
 
 export const API_ENDPOINTS = {
   login: `${BACKEND_BASE_URL}/api/login`,
