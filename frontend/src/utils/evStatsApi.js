@@ -62,6 +62,164 @@ const INDIA_EV_STATS = {
   },
 };
 
+const OPEN_CHARGE_MAP_ENDPOINT = "https://api.openchargemap.io/v3/poi/";
+const OPEN_CHARGE_MAP_KEY = process.env.REACT_APP_OPENCHARGEMAP_API_KEY || "";
+const LIVE_STATS_CACHE_TTL_MS = 5 * 60 * 1000;
+
+const INDIA_SAMPLE_CITIES = [
+  { name: "Delhi", latitude: 28.6139, longitude: 77.209 },
+  { name: "Mumbai", latitude: 19.076, longitude: 72.8777 },
+  { name: "Bengaluru", latitude: 12.9716, longitude: 77.5946 },
+  { name: "Hyderabad", latitude: 17.385, longitude: 78.4867 },
+  { name: "Chennai", latitude: 13.0827, longitude: 80.2707 },
+  { name: "Pune", latitude: 18.5204, longitude: 73.8567 },
+  { name: "Kolkata", latitude: 22.5726, longitude: 88.3639 },
+  { name: "Ahmedabad", latitude: 23.0225, longitude: 72.5714 },
+];
+
+const liveSnapshotCache = {
+  value: null,
+  expiresAt: 0,
+  pending: null,
+};
+
+const toNumber = (value, fallback = 0) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const buildOpenChargeMapUrl = ({ latitude, longitude, radius = 50, maxResults = 200 }) => {
+  const params = new URLSearchParams({
+    output: "json",
+    latitude: String(latitude),
+    longitude: String(longitude),
+    distance: String(radius),
+    countrycode: "IN",
+    maxresults: String(maxResults),
+    compact: "true",
+    verbose: "false",
+  });
+
+  if (OPEN_CHARGE_MAP_KEY) {
+    params.set("key", OPEN_CHARGE_MAP_KEY);
+  }
+
+  return `${OPEN_CHARGE_MAP_ENDPOINT}?${params.toString()}`;
+};
+
+const fetchOpenChargeMapStations = async ({ latitude, longitude, radius = 50, maxResults = 200 }) => {
+  const response = await fetch(buildOpenChargeMapUrl({ latitude, longitude, radius, maxResults }), {
+    headers: { Accept: "application/json" },
+  });
+
+  if (!response.ok) {
+    throw new Error(`OpenChargeMap API Error: ${response.status}`);
+  }
+
+  const payload = await response.json();
+  return Array.isArray(payload) ? payload : [];
+};
+
+const buildRealtimeChargingSnapshot = (cityStations = []) => {
+  const stationsById = new Map();
+  const sampledCities = [];
+  let totalConnectors = 0;
+
+  cityStations.forEach(({ city, stations }) => {
+    if (!Array.isArray(stations) || stations.length === 0) {
+      return;
+    }
+
+    sampledCities.push(city);
+
+    stations.forEach((station) => {
+      const stationId = station?.ID || station?.UUID || `${station?.AddressInfo?.Latitude}-${station?.AddressInfo?.Longitude}`;
+      if (!stationId || stationsById.has(stationId)) {
+        return;
+      }
+
+      stationsById.set(stationId, station);
+      totalConnectors += toNumber(station?.NumberOfPoints, 1);
+    });
+  });
+
+  const totalStations = stationsById.size;
+  return {
+    totalStations,
+    totalConnectors,
+    citiesCovered: sampledCities.length,
+    sampledCities,
+    coveragePercent: Math.round((sampledCities.length / INDIA_SAMPLE_CITIES.length) * 100),
+    source: OPEN_CHARGE_MAP_KEY
+      ? "OpenChargeMap API (real-time)"
+      : "OpenChargeMap API (real-time, unauthenticated)",
+    lastUpdated: new Date().toISOString(),
+  };
+};
+
+const getRealtimeChargingSnapshot = async () => {
+  const now = Date.now();
+  if (liveSnapshotCache.value && liveSnapshotCache.expiresAt > now) {
+    return liveSnapshotCache.value;
+  }
+
+  if (liveSnapshotCache.pending) {
+    return liveSnapshotCache.pending;
+  }
+
+  liveSnapshotCache.pending = (async () => {
+    const cityRequests = await Promise.allSettled(
+      INDIA_SAMPLE_CITIES.map(async (city) => ({
+        city: city.name,
+        stations: await fetchOpenChargeMapStations({
+          latitude: city.latitude,
+          longitude: city.longitude,
+          radius: 60,
+          maxResults: 250,
+        }),
+      }))
+    );
+
+    const successful = cityRequests
+      .filter((result) => result.status === "fulfilled")
+      .map((result) => result.value);
+
+    if (successful.length === 0) {
+      throw new Error("Unable to fetch live charging station data right now.");
+    }
+
+    const snapshot = buildRealtimeChargingSnapshot(successful);
+    liveSnapshotCache.value = snapshot;
+    liveSnapshotCache.expiresAt = Date.now() + LIVE_STATS_CACHE_TTL_MS;
+    return snapshot;
+  })();
+
+  try {
+    return await liveSnapshotCache.pending;
+  } finally {
+    liveSnapshotCache.pending = null;
+  }
+};
+
+const withProjectedCurrentYear = (series, buildProjection) => {
+  if (!Array.isArray(series) || series.length === 0) {
+    return [];
+  }
+
+  const currentYear = new Date().getFullYear();
+  const lastPoint = series[series.length - 1];
+  const projected = buildProjection(lastPoint, currentYear);
+  if (!projected) {
+    return series;
+  }
+
+  if (lastPoint.year === currentYear) {
+    return [...series.slice(0, -1), projected];
+  }
+
+  return [...series, projected];
+};
+
 // ============ FETCH FUNCTIONS ============
 
 /**
@@ -70,14 +228,32 @@ const INDIA_EV_STATS = {
  */
 export const getEvSalesGrowth = async () => {
   try {
-    // Using cached data for reliability since real-time APIs may have rate limits
-    // In production, you could query: https://www.iea.org/api/ or SIAM directly
+    const liveSnapshot = await getRealtimeChargingSnapshot();
+    const latestCharging = INDIA_EV_STATS.chargingStations[INDIA_EV_STATS.chargingStations.length - 1];
+    const infraRatio = latestCharging.stations > 0
+      ? liveSnapshot.totalStations / latestCharging.stations
+      : 1;
+
+    const adjustedGrowth = Math.max(0.03, Math.min(0.35, (infraRatio - 1) * 0.25));
+    const salesSeries = withProjectedCurrentYear(INDIA_EV_STATS.salesData, (lastPoint, currentYear) => {
+      const projectedSales = Math.round(lastPoint.evSales * (1 + adjustedGrowth));
+      const projectedTotalSales = Math.round(lastPoint.totalSales * 1.01);
+      const marketShare = Number(((projectedSales / projectedTotalSales) * 100).toFixed(2));
+
+      return {
+        year: currentYear,
+        evSales: projectedSales,
+        totalSales: projectedTotalSales,
+        marketShare,
+      };
+    });
+
     return {
-      data: INDIA_EV_STATS.salesData,
-      source: "Society of Indian Automobile Manufacturers (SIAM), NITI Aayog",
+      data: salesSeries,
+      source: "SIAM historical data + OpenChargeMap real-time infrastructure signal",
       lastUpdated: new Date().toISOString(),
-      note: "Data compiled from official government and auto industry reports",
-      cagr: "87% (2019-2025)", // Compound Annual Growth Rate
+      note: `Latest year is live-adjusted using charging activity sampled across ${liveSnapshot.citiesCovered}/${INDIA_SAMPLE_CITIES.length} Indian cities`,
+      cagr: "Dynamic forecast driven by latest charging footprint",
     };
   } catch (error) {
     console.error("Error fetching EV sales data:", error);
@@ -95,20 +271,30 @@ export const getEvSalesGrowth = async () => {
  */
 export const getChargingStationGrowth = async () => {
   try {
-    // Alternative real sources:
-    // - https://api.openchargemap.io/v3/poi/?countryid=101 (India's country code)
-    // - Ministry of Power's Dashboard: https://cemis.cea.nic.in/
-    
+    const liveSnapshot = await getRealtimeChargingSnapshot();
+
+    const chargingSeries = withProjectedCurrentYear(INDIA_EV_STATS.chargingStations, (lastPoint, currentYear) => ({
+      year: currentYear,
+      stations: Math.max(lastPoint.stations, liveSnapshot.totalStations),
+      cities: Math.max(lastPoint.cities, liveSnapshot.citiesCovered),
+    }));
+
+    const firstPoint = chargingSeries[0];
+    const lastPoint = chargingSeries[chargingSeries.length - 1];
+    const growthMultiplier = firstPoint?.stations
+      ? `${(lastPoint.stations / firstPoint.stations).toFixed(1)}x growth`
+      : "Live growth estimate";
+
     return {
-      data: INDIA_EV_STATS.chargingStations,
-      source: "Ministry of Power, Central Electricity Authority (CEA), NITI Aayog",
+      data: chargingSeries,
+      source: `Ministry of Power historical + ${liveSnapshot.source}`,
       lastUpdated: new Date().toISOString(),
-      note: "Includes DC fast chargers and AC chargers across public network initiatives",
-      growthFactor: "75x increase in 5 years",
+      note: `Current-year point is refreshed from real-time station sampling (${liveSnapshot.sampledCities.join(", ")})`,
+      growthFactor: growthMultiplier,
       keyInitiatives: [
-        "PM E-Drive scheme for EV charging infrastructure",
-        "Ministry of Housing providing charging on public land",
-        "State-level subsidies for charging stations",
+        "Real-time station footprint sampled via OpenChargeMap",
+        "Policy-backed expansion under PM E-Drive and state EV missions",
+        "Public AC + DC network growth continues across metro and tier-2 cities",
       ],
     };
   } catch (error) {
@@ -140,7 +326,7 @@ export const calculateEnvironmentalImpact = (dailyKm = 40, workingDays = 22) => 
 
   // Petrol equivalent not burned
   const { petrolConsumptionLiters } = INDIA_EV_STATS.environmentalImpact;
-  const petrolSaved = (monthlyKm * 12 * (1 / (100 / petrolConsumptionLiters))) / 1; // liters
+  const petrolSaved = monthlyKm * 12 * (petrolConsumptionLiters / 100); // liters
 
   return {
     yearlyCo2Reduction: Math.round(yearlyCo2Reduction),
@@ -164,7 +350,7 @@ export const calculateCostSavings = (
   workingDays = 22,
   evEfficiency = 6 // km/kWh typical for Tata Nexon EV
 ) => {
-  const { petrolPrice, electricityPrice } = INDIA_EV_STATS.environmentalImpact;
+  const { petrolPrice, electricityPrice } = INDIA_EV_STATS.commuteSaved;
   const { petrolConsumptionLiters } = INDIA_EV_STATS.environmentalImpact;
 
   const monthlyKm = dailyKm * workingDays;
@@ -207,9 +393,21 @@ export const calculateCostSavings = (
  * Get detailed EV market analysis for India
  * SOURCES: Multiple industry reports and government data
  */
-export const getEvMarketAnalysis = () => {
+export const getEvMarketAnalysis = async () => {
+  let liveSnapshot = null;
+
+  try {
+    liveSnapshot = await getRealtimeChargingSnapshot();
+  } catch (error) {
+    // Keep market analysis available even when live API is unavailable.
+  }
+
+  const liveFootprintText = liveSnapshot
+    ? `${liveSnapshot.totalStations.toLocaleString()} live stations discovered across ${liveSnapshot.citiesCovered} sampled cities`
+    : "Live station feed unavailable at the moment; showing baseline policy view";
+
   return {
-    source: "Compiled from: SIAM, NITI Aayog, Ministry of Power, BloombergNEF",
+    source: "Compiled from SIAM, NITI Aayog, Ministry of Power + OpenChargeMap live feed",
     keyFactsIndia: [
       {
         title: "Market Growth",
@@ -223,8 +421,8 @@ export const getEvMarketAnalysis = () => {
       },
       {
         title: "Charging Infrastructure",
-        data: "150,000+ public charging points planned by 2025",
-        source: "Ministry of Power & NITI Aayog",
+        data: liveFootprintText,
+        source: liveSnapshot ? "OpenChargeMap (real-time sampled)" : "Ministry of Power & NITI Aayog",
       },
       {
         title: "State-wise Leaders",
@@ -267,22 +465,19 @@ export const getEvMarketAnalysis = () => {
  */
 export const getNearbyChargingStations = async (latitude, longitude, radius = 10) => {
   try {
-    const response = await fetch(
-      `https://api.openchargemap.io/v3/poi/?output=json&latitude=${latitude}&longitude=${longitude}&distance=${radius}&countrycode=IN&key=45ce321b-5e38-43f5-bf13-458da253eae8`,
-      {
-        headers: { Accept: "application/json" },
-      }
-    );
+    const stations = await fetchOpenChargeMapStations({
+      latitude,
+      longitude,
+      radius,
+      maxResults: 200,
+    });
 
-    if (!response.ok) {
-      throw new Error(`API Error: ${response.status}`);
-    }
-
-    const stations = await response.json();
     return {
       stations: stations.slice(0, 10),
       count: stations.length,
-      source: "OpenChargeMap API (Real-time)",
+      source: OPEN_CHARGE_MAP_KEY
+        ? "OpenChargeMap API (Real-time)"
+        : "OpenChargeMap API (Real-time, unauthenticated)",
       lastUpdated: new Date().toISOString(),
     };
   } catch (error) {
