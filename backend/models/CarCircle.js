@@ -51,6 +51,12 @@ const carCircleSchema = new mongoose.Schema(
         message: "You must provide 1 to 10 photos",
       },
     },
+    dentStatus: {
+      type: String,
+      enum: ["Dent Detected", "No Dent Detected"],
+      default: "No Dent Detected",
+      required: true,
+    },
     overview: {
       price: { type: String, required: true },
       kilometers: { type: String, required: true },
@@ -64,6 +70,12 @@ const carCircleSchema = new mongoose.Schema(
       insurance: { type: String, required: true },
       registrationType: { type: String, required: true },
       state: { type: String, required: true },
+      dentStatus: {
+        type: String,
+        enum: ["Dent Detected", "No Dent Detected"],
+        default: "No Dent Detected",
+        required: true,
+      },
     },
   },
   {

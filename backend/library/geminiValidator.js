@@ -3,6 +3,8 @@ const fs = require("fs");
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
+const normalizeDentStatus = (hasDent) => (hasDent ? "Dent Detected" : "No Dent Detected");
+
 /**
  * Validates if the uploaded car images are of Tata brand vehicles
  * @param {Array} uploadedFiles - Array of file objects from multer (req.files)
@@ -126,4 +128,65 @@ If you cannot identify the brand with reasonable confidence, set confidence to "
 
 module.exports = {
   validateTataCarImages,
+  detectDentStatusFromImages,
 };
+
+/**
+ * Detects whether uploaded car images show visible dents.
+ * @param {Array} uploadedFiles - Array of file objects from multer (req.files)
+ * @returns {Promise<string>} - "Dent Detected" | "No Dent Detected"
+ */
+async function detectDentStatusFromImages(uploadedFiles) {
+  try {
+    if (!uploadedFiles || uploadedFiles.length === 0) {
+      return "No Dent Detected";
+    }
+
+    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+    const imagesToCheck = uploadedFiles.slice(0, Math.min(3, uploadedFiles.length));
+
+    const imageParts = imagesToCheck.map((file) => {
+      const imageData = fs.readFileSync(file.path);
+      return {
+        inlineData: {
+          data: imageData.toString("base64"),
+          mimeType: file.mimetype,
+        },
+      };
+    });
+
+    const prompt = `You are a car body inspection assistant.
+Analyze the uploaded car photos and determine if there is any visible dent.
+
+Return only strict JSON in this format:
+{
+  "hasDent": true,
+  "confidence": "high|medium|low",
+  "reason": "short reason"
+}
+
+Rules:
+- hasDent = true if any visible dent is present on body panels.
+- If uncertain, choose true (safer judgment).
+- Do not return markdown or extra text.`;
+
+    const result = await model.generateContent([prompt, ...imageParts]);
+    const response = await result.response;
+    const text = response.text();
+
+    let parsed;
+    try {
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(text);
+    } catch (parseError) {
+      console.error("Error parsing dent detection response:", parseError);
+      return "Dent Detected";
+    }
+
+    const hasDent = Boolean(parsed?.hasDent);
+    return normalizeDentStatus(hasDent);
+  } catch (error) {
+    console.error("Error detecting dent status:", error);
+    return "Dent Detected";
+  }
+}

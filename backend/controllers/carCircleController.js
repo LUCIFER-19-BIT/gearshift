@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const multer = require("multer");
 const CarCircle = require("../models/CarCircle");
-const { validateTataCarImages } = require("../library/geminiValidator");
+const { validateTataCarImages, detectDentStatusFromImages } = require("../library/geminiValidator");
 
 const MAX_IMAGE_COUNT = 10;
 const MAX_SINGLE_IMAGE_BYTES = 4 * 1024 * 1024;
@@ -209,6 +209,13 @@ const createCarCircleListing = async (req, res) => {
       return res.status(400).json({ message: validationError });
     }
 
+    const dentStatus = await detectDentStatusFromImages(req.files || []);
+    payload.dentStatus = dentStatus;
+    payload.overview = {
+      ...payload.overview,
+      dentStatus,
+    };
+
     const listing = new CarCircle({
       userId: req.user.id,
       ...payload,
@@ -250,6 +257,18 @@ const updateCarCircleListing = async (req, res) => {
     if (validationError) {
       return res.status(400).json({ message: validationError });
     }
+
+    // Dent status is always backend-controlled (not user-editable).
+    const dentStatus =
+      uploadedImageUrls.length > 0
+        ? await detectDentStatusFromImages(req.files || [])
+        : existingListing.dentStatus || existingListing.overview?.dentStatus || "No Dent Detected";
+
+    payload.dentStatus = dentStatus;
+    payload.overview = {
+      ...payload.overview,
+      dentStatus,
+    };
 
     const updatedListing = await CarCircle.findOneAndUpdate(
       { _id: req.params.id, userId: req.user.id },

@@ -101,6 +101,7 @@ const INITIAL_FORM_DATA = {
 };
 
 const SEEDED_STATES = ["Maharashtra", "Karnataka", "Tamil Nadu", "Gujarat", "Delhi", "Uttar Pradesh", "Rajasthan", "Punjab", "Telangana"];
+const DEFAULT_BUDGET_MAX = 10000000;
 
 const parseApiResponse = async (response) => {
   const contentType = response.headers.get("content-type") || "";
@@ -271,7 +272,7 @@ const CarCircle = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingListingId, setEditingListingId] = useState(null);
   const [filters, setFilters] = useState({
-    budget: 2000000,
+    budget: DEFAULT_BUDGET_MAX,
     modelYear: "",
     maxKm: 200000,
     state: "",
@@ -580,8 +581,18 @@ const CarCircle = () => {
     return Array.from(uniqueYears).sort((a, b) => b - a);
   }, [listings]);
 
+  const budgetRangeMax = useMemo(() => {
+    const highestListingPrice = listings.reduce((maxPrice, listing) => {
+      const price = Number(listing?.price) || 0;
+      return Math.max(maxPrice, price);
+    }, 0);
+
+    // Keep slider sensible for empty data while allowing expensive new listings.
+    return Math.max(DEFAULT_BUDGET_MAX, Math.ceil(highestListingPrice / 100000) * 100000);
+  }, [listings]);
+
   const filteredListings = useMemo(() => {
-    return listings.filter((listing) => {
+    const visibleListings = listings.filter((listing) => {
       const listingState = getListingState(listing);
       const listingYear = getListingYear(listing);
 
@@ -591,6 +602,18 @@ const CarCircle = () => {
       const stateMatch = !filters.state || filters.state === listingState;
 
       return budgetMatch && yearMatch && kmMatch && stateMatch;
+    });
+
+    return visibleListings.sort((left, right) => {
+      const leftIsOwner = String(left.userId || "") === String(currentUserId || "");
+      const rightIsOwner = String(right.userId || "") === String(currentUserId || "");
+
+      if (leftIsOwner !== rightIsOwner) {
+        return leftIsOwner ? -1 : 1;
+      }
+
+      // Keep newest first inside each owner/non-owner group.
+      return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
     });
   }, [listings, filters]);
 
@@ -608,6 +631,13 @@ const CarCircle = () => {
       { label: "Insurance", value: selectedListing.overview?.insurance || "Not Available" },
       { label: "Registration Type", value: selectedListing.overview?.registrationType || "Not Available" },
       { label: "State", value: selectedListing.overview?.state || "Not Available" },
+      {
+        label: "Dent Status",
+        value:
+          selectedListing.overview?.dentStatus ||
+          selectedListing.dentStatus ||
+          "Not Analyzed",
+      },
     ]
     : [];
 
@@ -797,7 +827,7 @@ const CarCircle = () => {
               name="budget"
               type="range"
               min="100000"
-              max="2000000"
+              max={budgetRangeMax}
               step="10000"
               value={filters.budget}
               onChange={handleFilterChange}
@@ -871,6 +901,9 @@ const CarCircle = () => {
                   <p className="carcircle-price">₹{Number(listing.price).toLocaleString()}</p>
                   <p>{Number(listing.kilometers).toLocaleString()} km • {listing.city}</p>
                   <p>Year: {getListingYear(listing) || "N/A"} • State: {getListingState(listing)}</p>
+                  <p>
+                    Dent Status: {listing.overview?.dentStatus || listing.dentStatus || "Not Analyzed"}
+                  </p>
                   <p>{listing.description}</p>
                   <p>{displayImageUrls.length} photos</p>
                   <button className="btn-outline" onClick={() => openExploreModal(listing)}>
